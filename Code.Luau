@@ -20,6 +20,7 @@ Fluent:Notify({
 -- Fluent provides Lucide Icons, they are optional
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Quests = Window:AddTab({ Title = "Quests", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -97,5 +98,24 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
                 :WaitForChild("SkillRemote")
                 :FireServer(unpack(args))
         end
+    end
+})
+
+
+local Section = Tabs.Quests:AddSection("Mark")
+
+local QuestsDropdown = Tabs.Quests:AddDropdown("QuestsDropdown", {
+    Title = "Mob",
+    Description = "Select the mob",
+    Values = {"Bandit", "Mad Bandit", "Evil Thugs", "Tigreal Tribe", "Gorilla Tribe"},
+    Multi = false,
+    Default = 1,
+})
+
+Tabs.Quests:AddButton({
+    Title = "Take Quest",
+    Description = "Take the quest of the selected Mob",
+    Callback = function()
+        print("Hello, world!")
     end
 })

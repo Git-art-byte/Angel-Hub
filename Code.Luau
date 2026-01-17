@@ -4,7 +4,7 @@ local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB | Dragon Blox" .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
-    Size = UDim2.fromOffset(520, 430),
+    Size = UDim2.fromOffset(520, 380),
     Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
     Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
@@ -12,7 +12,7 @@ local Window = Fluent:CreateWindow({
 
 Fluent:Notify({
         Title = "Loaded!",
-        Content = Angel Hub has succesfully been loaded!,
+        Content = "Angel Hub has succesfully been loaded!",
         SubContent = nil, -- Optional
         Duration = 5 -- Set to nil to make the notification not disappear
 })

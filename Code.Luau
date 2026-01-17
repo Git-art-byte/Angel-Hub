@@ -139,6 +139,9 @@ local TakeQuestButton = Tabs.Main:AddButton({
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
 
+        -- save current position
+        local originalCFrame = hrp.CFrame
+
         local npc = workspace:WaitForChild("Misc")
             :WaitForChild("NPC")
             :WaitForChild("Quests")
@@ -146,6 +149,9 @@ local TakeQuestButton = Tabs.Main:AddButton({
 
         -- teleport to NPC head
         hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
+
+        -- wait a short moment to make sure the game registers the teleport
+        task.wait(0.2)
 
         -- take quest
         local args = {
@@ -164,5 +170,9 @@ local TakeQuestButton = Tabs.Main:AddButton({
             :WaitForChild("RF")
             :WaitForChild("Answer")
             :InvokeServer(unpack(args))
+
+        -- wait 1 second then return to original position
+        task.wait(1)
+        hrp.CFrame = originalCFrame
     end
 })

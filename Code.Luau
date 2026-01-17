@@ -6,3 +6,9 @@ local Window = Library:CreateWindow({
     Icon = 95816097006870,
     NotifySide = "Right",
 })
+
+Library:Notify({
+    Title = "Loaded",
+    Description = "Angel Hub has succesfully loaded!",
+    Time = 4,
+})

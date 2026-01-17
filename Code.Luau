@@ -104,18 +104,65 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 
 local Section = Tabs.Quests:AddSection("Mark")
 
-local QuestsDropdown = Tabs.Quests:AddDropdown("QuestsDropdown", {
-    Title = "Mob",
-    Description = "Select the mob",
-    Values = {"Bandit", "Mad Bandit", "Evil Thugs", "Tigreal Tribe", "Gorilla Tribe"},
-    Multi = false,
+local SelectedQuestId = 2
+
+local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
+    Title = "Select Mob",
+    Values = {
+        "Bandit",
+        "Mad Bandit",
+        "Evil Thugs",
+        "Tigreal Tribe",
+        "Gorillaz Tribe"
+    },
     Default = 1,
+    Multi = false,
+    Callback = function(value)
+        if value == "Bandit" then
+            SelectedQuestId = 2
+        elseif value == "Mad Bandit" then
+            SelectedQuestId = 7
+        elseif value == "Evil Thugs" then
+            SelectedQuestId = 12
+        elseif value == "Tigreal Tribe" then
+            SelectedQuestId = 17
+        elseif value == "Gorillaz Tribe" then
+            SelectedQuestId = 22
+        end
+    end
 })
 
-Tabs.Quests:AddButton({
+local TakeQuestButton = Tabs.Main:AddButton({
     Title = "Take Quest",
-    Description = "Take the quest of the selected Mob",
     Callback = function()
-        print("Hello, world!")
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        local npc = workspace:WaitForChild("Misc")
+            :WaitForChild("NPC")
+            :WaitForChild("Quests")
+            :WaitForChild("QuestNPCMain1_WestCity")
+
+        -- teleport to NPC head
+        hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
+
+        -- take quest
+        local args = {
+            "NPCQuest_WestCity",
+            SelectedQuestId,
+            npc
+        }
+
+        game:GetService("ReplicatedStorage")
+            :WaitForChild("Packages")
+            :WaitForChild("_Index")
+            :WaitForChild("sleitnick_knit@1.4.7")
+            :WaitForChild("knit")
+            :WaitForChild("Services")
+            :WaitForChild("DialogService")
+            :WaitForChild("RF")
+            :WaitForChild("Answer")
+            :InvokeServer(unpack(args))
     end
 })

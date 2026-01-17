@@ -106,7 +106,7 @@ local Section = Tabs.Quests:AddSection("Mark")
 
 local SelectedQuestId = 2
 
-local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
+local MobDropdown = Tabs.Quests:AddDropdown("MobDropdown", {
     Title = "Select Mob",
     Values = {
         "Bandit",
@@ -132,7 +132,7 @@ local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     end
 })
 
-local TakeQuestButton = Tabs.Main:AddButton({
+local TakeQuestButton = Tabs.Quests:AddButton({
     Title = "Take Quest",
     Callback = function()
         local player = game.Players.LocalPlayer

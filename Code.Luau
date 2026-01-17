@@ -4,7 +4,7 @@ local Window = Fluent:CreateWindow({
     Title = "Fluent " .. Fluent.Version,
     SubTitle = "by dawid",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
+    Size = UDim2.fromOffset(520, 430),
     Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
     Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
@@ -19,7 +19,7 @@ Fluent:Notify({
 
 -- Fluent provides Lucide Icons, they are optional
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Tab = Window:AddTab({ Title = "Main", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -32,7 +32,7 @@ InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
 
-local Toggle = Main:AddToggle("MyToggle", 
+local Toggle = Tab:AddToggle("MyToggle", 
 {
     Title = "Auto Punch", 
     Description = "Toggle description",

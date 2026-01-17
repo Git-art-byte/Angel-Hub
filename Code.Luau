@@ -132,47 +132,92 @@ local MobDropdown = Tabs.Quests:AddDropdown("MobDropdown", {
     end
 })
 
-local TakeQuestButton = Tabs.Quests:AddButton({
-    Title = "Take Quest",
-    Callback = function()
+local AutoFarmEnabled = false
+
+local QuestAndFarmToggle = Tabs.Quests:AddToggle("QuestAndFarmToggle", {
+    Title = "Take Quest & Auto Farm",
+    Default = false,
+    Callback = function(state)
+        AutoFarmEnabled = state
         local player = game.Players.LocalPlayer
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
 
-        -- save current position
-        local originalCFrame = hrp.CFrame
+        if state then
+            -- save original position
+            local originalCFrame = hrp.CFrame
 
-        local npc = workspace:WaitForChild("Misc")
-            :WaitForChild("NPC")
-            :WaitForChild("Quests")
-            :WaitForChild("QuestNPCMain1_WestCity")
+            -- teleport to NPC
+            local npc = workspace:WaitForChild("Misc")
+                :WaitForChild("NPC")
+                :WaitForChild("Quests")
+                :WaitForChild("QuestNPCMain1_WestCity")
 
-        -- teleport to NPC head
-        hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
+            hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
+            task.wait(0.2)
 
-        -- wait a short moment to make sure the game registers the teleport
-        task.wait(0.2)
+            -- take quest
+            local args = {
+                "NPCQuest_WestCity",
+                SelectedQuestId,
+                npc
+            }
 
-        -- take quest
-        local args = {
-            "NPCQuest_WestCity",
-            SelectedQuestId,
-            npc
-        }
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("Packages")
+                :WaitForChild("_Index")
+                :WaitForChild("sleitnick_knit@1.4.7")
+                :WaitForChild("knit")
+                :WaitForChild("Services")
+                :WaitForChild("DialogService")
+                :WaitForChild("RF")
+                :WaitForChild("Answer")
+                :InvokeServer(unpack(args))
 
-        game:GetService("ReplicatedStorage")
-            :WaitForChild("Packages")
-            :WaitForChild("_Index")
-            :WaitForChild("sleitnick_knit@1.4.7")
-            :WaitForChild("knit")
-            :WaitForChild("Services")
-            :WaitForChild("DialogService")
-            :WaitForChild("RF")
-            :WaitForChild("Answer")
-            :InvokeServer(unpack(args))
+            -- start auto-farming
+            task.spawn(function()
+                while AutoFarmEnabled do
+                    local mobName = MobDropdown:GetValue()
+                    local mobsFolder = workspace["World Mobs"].Mobs
+                    local foundMob = false
 
-        -- wait 1 second then return to original position
-        task.wait(1)
-        hrp.CFrame = originalCFrame
+                    for _, mob in pairs(mobsFolder:GetChildren()) do
+                        -- check if mob is the correct type and has a Humanoid
+                        if mob.Name == mobName and mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
+                            foundMob = true
+                            -- float above mob
+                            hrp.CFrame = mob.HumanoidRootPart.CFrame + Vector3.new(0, 10, 0)
+
+                            -- punch remote
+                            local punchArgs = {
+                                {
+                                    Camera = hrp.CFrame,
+                                    SkillId = "1",
+                                    Began = true,
+                                    CFrame = hrp.CFrame,
+                                    ["Typ\208\181"] = 1,
+                                    Aim = mob.HumanoidRootPart.Position
+                                }
+                            }
+
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("Remotes")
+                                :WaitForChild("SkillRemote")
+                                :FireServer(unpack(punchArgs))
+
+                            task.wait(0.2) -- punch delay
+                        end
+                    end
+
+                    -- if no mobs found, wait a bit before scanning again
+                    if not foundMob then
+                        task.wait(1)
+                    end
+                end
+            end)
+        else
+            -- toggle OFF → stop auto-farming
+            AutoFarmEnabled = false
+        end
     end
 })

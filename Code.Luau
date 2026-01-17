@@ -19,7 +19,7 @@ Fluent:Notify({
 
 -- Fluent provides Lucide Icons, they are optional
 local Tabs = {
-    Tab = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -32,7 +32,7 @@ InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
 
-local Toggle = Tab:AddToggle("MyToggle", 
+local Toggle = Tabs.Main:AddToggle("MyToggle", 
 {
     Title = "Auto Punch", 
     Description = "Toggle description",

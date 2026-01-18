@@ -122,17 +122,13 @@ local function updateNearestMobs()
     if not hrp then return end
 
     local mobs = {}
-    local nameCount = {}
+    local added = {}
 
     for _, mob in ipairs(mobsFolder:GetChildren()) do
         if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
             local distance = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
-
-            nameCount[mob.Name] = (nameCount[mob.Name] or 0) + 1
-            local uniqueName = mob.Name .. " [" .. nameCount[mob.Name] .. "]"
-
             table.insert(mobs, {
-                DisplayName = uniqueName,
+                Name = mob.Name,
                 Distance = distance
             })
         end
@@ -144,10 +140,18 @@ local function updateNearestMobs()
 
     local values = {}
     for _, mob in ipairs(mobs) do
-        table.insert(values, mob.DisplayName)
+        if not added[mob.Name] then
+            added[mob.Name] = true
+            table.insert(values, mob.Name)
+        end
     end
 
     NearestMobsDropdown:SetValues(values)
 end
 
-updateNearestMobs()
+task.spawn(function()
+    while true do
+        updateNearestMobs()
+        task.wait(0.7)
+    end
+end)

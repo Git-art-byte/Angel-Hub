@@ -102,7 +102,7 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 })
 
 
-local Section = Tabs.Quests:AddSection("Evee")
+local Section = Tabs.AutoFarm:AddSection("Evee")
 
 local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",

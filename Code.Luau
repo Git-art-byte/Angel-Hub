@@ -1,4 +1,4 @@
-local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB | Dragon Blox" .. Fluent.Version,
@@ -32,7 +32,7 @@ InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
-local Section = Tabs.Main:AddSection("Train")
+local SectionA = Tabs.Main:AddSection("Train")
 
 local TrainEnabled = false
 local SelectedSkillId = "1"
@@ -102,7 +102,7 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 })
 
 
-local Section = Tabs.AutoFarm:AddSection("Evee")
+local SectionB = Tabs.AutoFarm:AddSection("Evee")
 
 local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",

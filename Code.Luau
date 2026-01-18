@@ -110,3 +110,44 @@ local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
     Multi = false,
     Default = 1,
 })
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local mobsFolder = workspace["World Mobs"].Mobs
+
+local function updateNearestMobs()
+    local character = player.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local mobs = {}
+    local nameCount = {}
+
+    for _, mob in ipairs(mobsFolder:GetChildren()) do
+        if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
+            local distance = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+
+            nameCount[mob.Name] = (nameCount[mob.Name] or 0) + 1
+            local uniqueName = mob.Name .. " [" .. nameCount[mob.Name] .. "]"
+
+            table.insert(mobs, {
+                DisplayName = uniqueName,
+                Distance = distance
+            })
+        end
+    end
+
+    table.sort(mobs, function(a, b)
+        return a.Distance < b.Distance
+    end)
+
+    local values = {}
+    for _, mob in ipairs(mobs) do
+        table.insert(values, mob.DisplayName)
+    end
+
+    NearestMobsDropdown:SetValues(values)
+end
+
+updateNearestMobs()

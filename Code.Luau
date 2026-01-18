@@ -102,32 +102,23 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 })
 
 
-local Section = Tabs.Quests:AddSection("Mark")
+local Section = Tabs.Quests:AddSection("Evee")
 
 local SelectedQuestId = 2
 
 local MobDropdown = Tabs.Quests:AddDropdown("MobDropdown", {
     Title = "Select Mob",
     Values = {
-        "Bandit",
-        "Mad Bandit",
-        "Evil Thugs",
-        "Tigreal Tribe",
-        "Gorillaz Tribe"
+        "Atom X002 Army",
+        "Atom X002"
     },
     Default = 1,
     Multi = false,
     Callback = function(value)
-        if value == "Bandit" then
+        if value == "Atom X002 Army" then
             SelectedQuestId = 2
-        elseif value == "Mad Bandit" then
+        elseif value == "Atom X002" then
             SelectedQuestId = 7
-        elseif value == "Evil Thugs" then
-            SelectedQuestId = 12
-        elseif value == "Tigreal Tribe" then
-            SelectedQuestId = 17
-        elseif value == "Gorillaz Tribe" then
-            SelectedQuestId = 22
         end
     end
 })
@@ -145,7 +136,7 @@ local TakeQuestButton = Tabs.Quests:AddButton({
         local npc = workspace:WaitForChild("Misc")
             :WaitForChild("NPC")
             :WaitForChild("Quests")
-            :WaitForChild("QuestNPCMain1_WestCity")
+            :WaitForChild("QuestNPCDroid2_AtomX002")
 
         -- teleport to NPC head
         hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
@@ -155,7 +146,7 @@ local TakeQuestButton = Tabs.Quests:AddButton({
 
         -- take quest
         local args = {
-            "NPCQuest_WestCity",
+            "NPCQuest_Tribe Village",
             SelectedQuestId,
             npc
         }
@@ -182,8 +173,7 @@ local running = false -- global flag to control the loop
 
 local FarmToggle = Tabs.Quests:AddToggle("MyToggle5", 
 {
-    Title = "AutoFarm Nearest Mob", 
-    Description = "Autofarm the nearest mob.",
+    Title = "AutoFarm Nearest Mob",
     Default = false,
     Callback = function(state)
         if state then
@@ -224,7 +214,7 @@ local FarmToggle = Tabs.Quests:AddToggle("MyToggle5",
                     -- Find all Bandits
                     local bandits = {}
                     for _, mob in pairs(mobsFolder:GetChildren()) do
-                        if mob.Name == "Bandit" and mob:FindFirstChild("HumanoidRootPart") then
+                        if mob.Name == "Atom X002 Army" and mob:FindFirstChild("HumanoidRootPart") then
                             table.insert(bandits, mob)
                         end
                     end

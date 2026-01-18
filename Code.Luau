@@ -109,61 +109,13 @@ local SelectedQuestId = 2
 local MobDropdown = Tabs.Quests:AddDropdown("MobDropdown", {
     Title = "Select Mob",
     Values = {
-        "Atom X002 Army",
-        "Atom X002"
+        "Atom X002 Army"
     },
     Default = 1,
     Multi = false,
     Callback = function(value)
         if value == "Atom X002 Army" then
             SelectedQuestId = 2
-        elseif value == "Atom X002" then
-            SelectedQuestId = 7
-        end
-    end
-})
-
--- Quest taking with updated NPC and remote
-local TakeQuestButton = Tabs.Quests:AddButton({
-    Title = "Take Quest",
-    Callback = function()
-        local player = game.Players.LocalPlayer
-        local char = player.Character or player.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-
-        -- save current position
-        local originalCFrame = hrp.CFrame
-
-        local npc = workspace:WaitForChild("Misc")
-            :WaitForChild("NPC")
-            :WaitForChild("Quest")
-            :WaitForChild("QuestNPCDroid2_AtomX002")
-
-        -- teleport to NPC head
-        hrp.CFrame = npc.Head.CFrame * CFrame.new(0, 0, -3)
-        task.wait(0.2)
-
-        -- invoke the quest remote
-        local args = {
-            "NPCQuest_Tribe Village",
-            2,
-            npc
-        }
-
-        game:GetService("ReplicatedStorage")
-            :WaitForChild("Packages")
-            :WaitForChild("_Index")
-            :WaitForChild("sleitnick_knit@1.4.7")
-            :WaitForChild("knit")
-            :WaitForChild("Services")
-            :WaitForChild("DialogService")
-            :WaitForChild("RF")
-            :WaitForChild("Answer")
-            :InvokeServer(unpack(args))
-
-        -- return to original position
-        task.wait(0.75)
-        hrp.CFrame = originalCFrame
     end
 })
 

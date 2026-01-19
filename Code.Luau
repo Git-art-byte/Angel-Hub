@@ -156,15 +156,91 @@ task.spawn(function()
     end
 end)
 
-local AutoFarmToggle = Tab:AddToggle("MyToggle5", 
-{
-    Title = "AutoFarm Mob",
-    Default = false
-    Callback = function(state)
-	if state then
-	    print("Toggle On")
-	else
-	    print("Toggle Off")
+local SelectedMobName = nil
+local AutoFarmEnabled = false
+
+-- store dropdown selection
+NearestMobsDropdown.Callback = function(value)
+    SelectedMobName = value
+end
+
+local function getNearestMobByName(name)
+    local character = player.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    local nearest, shortest = nil, math.huge
+
+    for _, mob in ipairs(mobsFolder:GetChildren()) do
+        if mob:IsA("Model")
+            and mob.Name == name
+            and mob:FindFirstChild("HumanoidRootPart") then
+
+            local dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if dist < shortest then
+                shortest = dist
+                nearest = mob
+            end
         end
-    end 
+    end
+
+    return nearest
+end
+
+local AutoFarmToggle = Tabs.AutoFarm:AddToggle("MyToggle5", {
+    Title = "AutoFarm Mob",
+    Default = false,
+    Callback = function(state)
+        AutoFarmEnabled = state
+
+        if state then
+            task.spawn(function()
+                while AutoFarmEnabled do
+                    if SelectedMobName then
+                        local character = player.Character
+                        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                        local mob = getNearestMobByName(SelectedMobName)
+
+                        if hrp and mob then
+                            hrp.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+
+                            local args = {
+                                {
+                                    Camera = CFrame.new(-58.72254943847656, 85.52032470703125, -374.1243896484375, 0.5716235637664795, 0.8078518509864807, -0.14360305666923523, 0, 0.17501555383205414, 0.9845656752586365, 0.8205159902572632, -0.562800943851471, 0.10004301369190216),
+                                    SkillId = "1",
+                                    Began = true,
+                                    CFrame = CFrame.new(-58.139434814453125, 72.95044708251953, -374.5310363769531, 0.5714630484580994, 0.8079167604446411, -0.14387644827365875, 0.0002584535686764866, 0.1751476675271988, 0.9845421314239502, 0.820627748966217, -0.562666654586792, 0.099881611764431),
+                                    ["Typ\208\181"] = 1,
+                                    Aim = vector.create(-50.945613861083984, 23.723339080810547, -379.5251159667969)
+                                }
+                            }
+
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("Remotes")
+                                :WaitForChild("SkillRemote")
+                                :FireServer(unpack(args))
+                        end
+                    end
+                    task.wait(0.05)
+                end
+
+                -- stop attacking
+                local args = {
+                    {
+                        Camera = CFrame.new(-58.72254943847656, 85.52032470703125, -374.1243896484375, 0.5716235637664795, 0.8078518509864807, -0.14360305666923523, 0, 0.17501555383205414, 0.9845656752586365, 0.8205159902572632, -0.562800943851471, 0.10004301369190216),
+                        SkillId = "1",
+                        Began = false,
+                        CFrame = CFrame.new(-58.139434814453125, 72.95044708251953, -374.5310363769531, 0.5714630484580994, 0.8079167604446411, -0.14387644827365875, 0.0002584535686764866, 0.1751476675271988, 0.9845421314239502, 0.820627748966217, -0.562666654586792, 0.099881611764431),
+                        ["Typ\208\181"] = 1,
+                        Aim = vector.create(-50.945613861083984, 23.723339080810547, -379.5251159667969)
+                    }
+                }
+
+                game:GetService("ReplicatedStorage")
+                    :WaitForChild("Remotes")
+                    :WaitForChild("SkillRemote")
+                    :FireServer(unpack(args))
+            end)
+        end
+    end
 })

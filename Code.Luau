@@ -175,7 +175,10 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
                 end
 
                 if nearest then
-                    hrp.CFrame = nearest.HumanoidRootPart.CFrame * CFrame.new(0,0,-5)
+                    local mobHRP = nearest.HumanoidRootPart
+local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
+
+hrp.CFrame = CFrame.new(behindPos, mobHRP.Position)
                     SkillRemote:FireServer(unpack(punchArgs))
                 end
 

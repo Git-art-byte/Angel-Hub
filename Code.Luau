@@ -38,39 +38,66 @@ local SectionA = Tabs.Main:AddSection("Train")
 local TrainEnabled = false
 local SelectedSkillId = "1"
 
-Tabs.Main:AddDropdown("SkillDropdown", {
+local SkillDropdown = Tabs.Main:AddDropdown("SkillDropdown", {
     Title = "Training Type",
     Values = {"Punch", "Durability", "Ki"},
     Default = 1,
+    Multi = false,
     Callback = function(value)
-        SelectedSkillId = (value == "Punch" and "1") or (value == "Durability" and "6") or "2"
+        if value == "Punch" then
+            SelectedSkillId = "1"
+        elseif value == "Durability" then
+            SelectedSkillId = "6"
+        elseif value == "Ki" then
+            SelectedSkillId = "2"
+        end
     end
 })
 
-Tabs.Main:AddToggle("TrainToggle", {
+local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
     Title = "Train",
     Default = false,
     Callback = function(state)
         TrainEnabled = state
+
         if state then
             task.spawn(function()
                 while TrainEnabled do
+                    local args = {
+                        {
+                            Camera = CFrame.new(-58.72254943847656, 85.52032470703125, -374.1243896484375, 0.5716235637664795, 0.8078518509864807, -0.14360305666923523, 0, 0.17501555383205414, 0.9845656752586365, 0.8205159902572632, -0.562800943851471, 0.10004301369190216),
+                            SkillId = SelectedSkillId,
+                            Began = true,
+                            CFrame = CFrame.new(-58.139434814453125, 72.95044708251953, -374.5310363769531, 0.5714630484580994, 0.8079167604446411, -0.14387644827365875, 0.0002584535686764866, 0.1751476675271988, 0.9845421314239502, 0.820627748966217, -0.562666654586792, 0.099881611764431),
+                            ["Typ\208\181"] = 1,
+                            Aim = vector.create(-50.945613861083984, 23.723339080810547, -379.5251159667969)
+                        }
+                    }
+
                     game:GetService("ReplicatedStorage")
                         :WaitForChild("Remotes")
                         :WaitForChild("SkillRemote")
-                        :FireServer({
-                            {
-                                Camera = CFrame.new(-58.7225,85.5203,-374.1244),
-                                SkillId = SelectedSkillId,
-                                Began = true,
-                                CFrame = CFrame.new(-58.1394,72.9504,-374.5310),
-                                ["Typ\208\181"] = 1,
-                                Aim = vector.create(-50.9456,23.7233,-379.5251)
-                            }
-                        })
+                        :FireServer(unpack(args))
+
                     task.wait()
                 end
             end)
+        else
+            local args = {
+                {
+                    Camera = CFrame.new(-58.72254943847656, 85.52032470703125, -374.1243896484375, 0.5716235637664795, 0.8078518509864807, -0.14360305666923523, 0, 0.17501555383205414, 0.9845656752586365, 0.8205159902572632, -0.562800943851471, 0.10004301369190216),
+                    SkillId = SelectedSkillId,
+                    Began = false,
+                    CFrame = CFrame.new(-58.139434814453125, 72.95044708251953, -374.5310363769531, 0.5714630484580994, 0.8079167604446411, -0.14387644827365875, 0.0002584535686764866, 0.1751476675271988, 0.9845421314239502, 0.820627748966217, -0.562666654586792, 0.099881611764431),
+                    ["Typ\208\181"] = 1,
+                    Aim = vector.create(-50.945613861083984, 23.723339080810547, -379.5251159667969)
+                }
+            }
+
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("Remotes")
+                :WaitForChild("SkillRemote")
+                :FireServer(unpack(args))
         end
     end
 })
@@ -177,14 +204,14 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
                 if nearest then
                     local mobHRP = nearest.HumanoidRootPart
 
--- position behind the mob
+-- place behind mob
 local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
 
--- force character FRONT to face the mob's BACK
-hrp.CFrame = CFrame.lookAt(
-    behindPos,
-    behindPos + (behindPos - mobHRP.Position)
-)
+-- face mob correctly (character front -> mob)
+hrp.CFrame =
+    CFrame.new(behindPos, mobHRP.Position)
+    * CFrame.Angles(0, math.pi, 0)
+
                     SkillRemote:FireServer(unpack(punchArgs))
                 end
 

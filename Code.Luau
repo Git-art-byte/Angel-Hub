@@ -176,9 +176,15 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
 
                 if nearest then
                     local mobHRP = nearest.HumanoidRootPart
+
+-- position behind the mob
 local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
 
-hrp.CFrame = CFrame.new(behindPos, mobHRP.Position)
+-- force character FRONT to face the mob's BACK
+hrp.CFrame = CFrame.lookAt(
+    behindPos,
+    behindPos + (behindPos - mobHRP.Position)
+)
                     SkillRemote:FireServer(unpack(punchArgs))
                 end
 

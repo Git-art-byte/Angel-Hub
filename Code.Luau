@@ -108,7 +108,7 @@ local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",
     Values = {},
     Multi = false,
-    Default = 1,
+    Default = "Bandit",
 })
 
 local Players = game:GetService("Players")
@@ -155,3 +155,16 @@ task.spawn(function()
         task.wait(0.7)
     end
 end)
+
+local AutoFarmToggle = Tab:AddToggle("MyToggle5", 
+{
+    Title = "AutoFarm Mob",
+    Default = false
+    Callback = function(state)
+	if state then
+	    print("Toggle On")
+	else
+	    print("Toggle Off")
+        end
+    end 
+})

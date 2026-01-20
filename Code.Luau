@@ -272,10 +272,42 @@ Tabs.Worlds:AddButton({
     end
 })
 
-local SectionF = Tabs.Worlds:AddSection("Droid Planet")
+local SectionF = Tabs.Worlds:AddSection("World Of Tournament")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [World of Tournament]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 3},"Join")
+    end
+})
+
+local SectionG = Tabs.Worlds:AddSection("Droid Planet")
 Tabs.Worlds:AddButton({
     Title = "Join",
     Callback = function()
         game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Planet Droid]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 4},"Join")
+    end
+})
+
+local SectionI = Tabs.Worlds:AddSection("Battleground")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Battlegrounds]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 5},"Join")
+    end
+})
+
+local SectionJ = Tabs.Worlds:AddSection("AFK World")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        
+    end
+})
+
+local SectionK = Tabs.Worlds:AddSection("Trade Hub")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        
     end
 })

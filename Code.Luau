@@ -205,7 +205,7 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
     local mobHRP = nearest.HumanoidRootPart
 
     -- position behind the mob
-    local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
+    local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 2)
 
     -- face SAME direction as the mob (your front -> mob's back)
     hrp.CFrame = CFrame.new(

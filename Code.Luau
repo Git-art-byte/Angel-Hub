@@ -108,7 +108,11 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 local SectionB = Tabs.Quests:AddSection("Evee")
 
 local SelectedMobName = nil
-Tabs.Quests:AddDropdown("NearestMobsDropdown", {
+local running = false
+local AutoFarmPosition = "Back"
+
+-- Nearest Mob Dropdown
+local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",
     Values = {},
     Multi = false,
@@ -118,7 +122,46 @@ Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     end
 })
 
-local running = false
+-- Update Nearest Mobs continuously
+local function updateNearestMobs()
+    local char = game.Players.LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local mobs, added = {}, {}
+
+    for _, mob in ipairs(workspace["World Mobs"].Mobs:GetChildren()) do
+        if mob:FindFirstChild("HumanoidRootPart") then
+            table.insert(mobs, {
+                Name = mob.Name,
+                Dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+            })
+        end
+    end
+
+    table.sort(mobs, function(a, b)
+        return a.Dist < b.Dist
+    end)
+
+    local values = {}
+    for _, mob in ipairs(mobs) do
+        if not added[mob.Name] then
+            added[mob.Name] = true
+            table.insert(values, mob.Name)
+        end
+    end
+
+    NearestMobsDropdown:SetValues(values)
+end
+
+task.spawn(function()
+    while true do
+        updateNearestMobs()
+        task.wait(0.7)
+    end
+end)
+
+-- AutoFarm Toggle
 Tabs.Quests:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm Mob",
     Default = false,
@@ -199,14 +242,14 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
     end
 })
 
+-- AutoFarm Position Dropdown under a separate section
 local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
 
-AutoFarmPosition = "Back"
 Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     Title = "AutoFarm Position",
     Values = {"Under", "Front", "Back", "Upper"},
     Multi = false,
-    Default = "Back",
+    Default = 3,
     Callback = function(value)
         AutoFarmPosition = value
     end

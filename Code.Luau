@@ -202,24 +202,19 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
                 end
 
                 if nearest then
-                    local mobHRP = nearest.HumanoidRootPart
+    local mobHRP = nearest.HumanoidRootPart
 
--- place behind mob
-local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
+    -- position behind the mob
+    local behindPos = mobHRP.Position - (mobHRP.CFrame.LookVector * 5)
 
--- face mob correctly (character front -> mob)
-hrp.CFrame =
-    CFrame.new(behindPos, mobHRP.Position)
-    * CFrame.Angles(0, math.pi, 0)
+    -- face SAME direction as the mob (your front -> mob's back)
+    hrp.CFrame = CFrame.new(
+        behindPos,
+        behindPos + mobHRP.CFrame.LookVector
+    )
 
-                    SkillRemote:FireServer(unpack(punchArgs))
-                end
-
-                task.wait(0.05)
-            end
-
-            punchArgs[1].Began = false
-            SkillRemote:FireServer(unpack(punchArgs))
+    SkillRemote:FireServer(unpack(punchArgs))
+end)
         end)
     end
 })

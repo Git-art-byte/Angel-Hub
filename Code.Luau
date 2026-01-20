@@ -215,6 +215,6 @@ Tabs.AutoFarm:AddToggle("AutoFarmToggle", {
 
     SkillRemote:FireServer(unpack(punchArgs))
 end)
-        end)
+        end
     end
 })

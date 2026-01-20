@@ -166,7 +166,7 @@ task.spawn(function()
     end
 end)
 
--- ⚔️ AUTOFARM (DEPENDS ON DROPDOWN)
+-- ⚔️ AUTOFARM (DEPENDS ON DROPDOWN & CHECKS HEALTH)
 Tabs.Quests:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm Mob",
     Default = false,
@@ -200,11 +200,15 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
                 local nearest, dist = nil, math.huge
                 for _, mob in ipairs(mobsFolder:GetChildren()) do
                     if mob.Name == SelectedMobName
-                    and mob:FindFirstChild("HumanoidRootPart") then
-                        local d = (playerHRP.Position - mob.HumanoidRootPart.Position).Magnitude
-                        if d < dist then
-                            dist = d
-                            nearest = mob
+                    and mob:FindFirstChild("HumanoidRootPart")
+                    and mob:FindFirstChildOfClass("Humanoid") then
+                        local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                        if humanoid.Health > 0 then
+                            local d = (playerHRP.Position - mob.HumanoidRootPart.Position).Magnitude
+                            if d < dist then
+                                dist = d
+                                nearest = mob
+                            end
                         end
                     end
                 end
@@ -218,13 +222,14 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
                     continue
                 end
 
-                while mob.Parent and running do
+                local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                while humanoid and humanoid.Health > 0 and running do
                     local mhrp = mob.HumanoidRootPart
                     local backPos = mhrp.Position - mhrp.CFrame.LookVector * 5
                     playerHRP.CFrame = CFrame.new(backPos, mhrp.Position)
 
                     SkillRemote:FireServer(unpack(punchArgs))
-                    task.wait(0.05) -- 🔥 SAME SPEED YOU ASKED
+                    task.wait(0.05)
                 end
 
                 punchArgs[1].Began = false

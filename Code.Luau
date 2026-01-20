@@ -268,6 +268,14 @@ local SectionE = Tabs.Worlds:AddSection("Crimson Planet")
 Tabs.Worlds:AddButton({
     Title = "Join",
     Callback = function()
-        j
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Crimson Planet]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 2},"Join")
+    end
+})
+
+local SectionF = Tabs.Worlds:AddSection("Droid Planet")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Main World]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 1},"Join")
     end
 })

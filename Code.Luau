@@ -107,17 +107,8 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 ----------------------------------------------------------------
 local SectionB = Tabs.Quests:AddSection("Evee")
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local player = Players.LocalPlayer
-local mobsFolder = workspace["World Mobs"].Mobs
-
 local SelectedMobName = nil
-local running = false
-
--- 🔽 NEAREST MOB DROPDOWN (REQUIRED)
-local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
+Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",
     Values = {},
     Multi = false,
@@ -127,46 +118,7 @@ local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     end
 })
 
--- 🔄 UPDATE NEAREST MOBS LIST
-local function updateNearestMobs()
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local mobs, added = {}, {}
-
-    for _, mob in ipairs(mobsFolder:GetChildren()) do
-        if mob:FindFirstChild("HumanoidRootPart") then
-            table.insert(mobs, {
-                Name = mob.Name,
-                Dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
-            })
-        end
-    end
-
-    table.sort(mobs, function(a, b)
-        return a.Dist < b.Dist
-    end)
-
-    local values = {}
-    for _, mob in ipairs(mobs) do
-        if not added[mob.Name] then
-            added[mob.Name] = true
-            table.insert(values, mob.Name)
-        end
-    end
-
-    NearestMobsDropdown:SetValues(values)
-end
-
-task.spawn(function()
-    while true do
-        updateNearestMobs()
-        task.wait(0.7)
-    end
-end)
-
--- ⚔️ AUTOFARM (DEPENDS ON DROPDOWN & CHECKS HEALTH)
+local running = false
 Tabs.Quests:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm Mob",
     Default = false,
@@ -185,8 +137,8 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
         end
 
         task.spawn(function()
-            local playerHRP = player.Character:WaitForChild("HumanoidRootPart")
-            local SkillRemote = ReplicatedStorage.Remotes.SkillRemote
+            local playerHRP = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+            local SkillRemote = game:GetService("ReplicatedStorage").Remotes.SkillRemote
 
             local punchArgs = {
                 {
@@ -198,10 +150,8 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
 
             local function getNearestSelectedMob()
                 local nearest, dist = nil, math.huge
-                for _, mob in ipairs(mobsFolder:GetChildren()) do
-                    if mob.Name == SelectedMobName
-                    and mob:FindFirstChild("HumanoidRootPart")
-                    and mob:FindFirstChildOfClass("Humanoid") then
+                for _, mob in ipairs(workspace["World Mobs"].Mobs:GetChildren()) do
+                    if mob.Name == SelectedMobName and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChildOfClass("Humanoid") then
                         local humanoid = mob:FindFirstChildOfClass("Humanoid")
                         if humanoid.Health > 0 then
                             local d = (playerHRP.Position - mob.HumanoidRootPart.Position).Magnitude
@@ -225,9 +175,18 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
                 local humanoid = mob:FindFirstChildOfClass("Humanoid")
                 while humanoid and humanoid.Health > 0 and running do
                     local mhrp = mob.HumanoidRootPart
-                    local backPos = mhrp.Position - mhrp.CFrame.LookVector * 5
-                    playerHRP.CFrame = CFrame.new(backPos, mhrp.Position)
+                    local pos
+                    if AutoFarmPosition == "Back" then
+                        pos = mhrp.Position - mhrp.CFrame.LookVector * 5
+                    elseif AutoFarmPosition == "Front" then
+                        pos = mhrp.Position + mhrp.CFrame.LookVector * 5
+                    elseif AutoFarmPosition == "Under" then
+                        pos = mhrp.Position - Vector3.new(0, 5, 0)
+                    elseif AutoFarmPosition == "Upper" then
+                        pos = mhrp.Position + Vector3.new(0, 5, 0)
+                    end
 
+                    playerHRP.CFrame = CFrame.new(pos, mhrp.Position)
                     SkillRemote:FireServer(unpack(punchArgs))
                     task.wait(0.05)
                 end
@@ -242,9 +201,13 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
 
 local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
 
-local DropdownFarmSetting = Tabs.Quests:AddDropdown("DropdownAutoFarm", {
+AutoFarmPosition = "Back"
+Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     Title = "AutoFarm Position",
     Values = {"Under", "Front", "Back", "Upper"},
     Multi = false,
     Default = "Back",
+    Callback = function(value)
+        AutoFarmPosition = value
+    end
 })

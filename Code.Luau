@@ -18,7 +18,7 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    AutoFarm = Window:AddTab({ Title = "AutoFarm", Icon = "badge-info" }),
+    Quests = Window:AddTab({ Title = "AutoFarm", Icon = "badge-info" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -233,4 +233,14 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
             end
         end)
     end
+})
+
+local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
+
+local DropdownFarmSetting = Tabs.Quests:AddDropdown("DropdownAutoFarm", {
+    Title = "AutoFarm Position",
+    Description = "Dropdown description",
+    Values = {"Under", "Front", "Back", "Upper"},
+    Multi = false,
+    Default = Back,
 })

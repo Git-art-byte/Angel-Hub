@@ -105,16 +105,20 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 ----------------------------------------------------------------
 -- AUTOFARM
 ----------------------------------------------------------------
-local SectionB = Tabs.AutoFarm:AddSection("Evee")
+local SectionB = Tabs.Quests:AddSection("Evee")
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local player = Players.LocalPlayer
 local mobsFolder = workspace["World Mobs"].Mobs
+
 local SelectedMobName = nil
 local running = false
 
-local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
-    Title = "Select Mob",
+-- 🔽 NEAREST MOB DROPDOWN (REQUIRED)
+local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
+    Title = "Nearest Mob",
     Values = {},
     Multi = false,
     Default = nil,
@@ -123,22 +127,26 @@ local NearestMobsDropdown = Tabs.AutoFarm:AddDropdown("NearestMobsDropdown", {
     end
 })
 
+-- 🔄 UPDATE NEAREST MOBS LIST
 local function updateNearestMobs()
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
     local mobs, added = {}, {}
 
     for _, mob in ipairs(mobsFolder:GetChildren()) do
-        if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
+        if mob:FindFirstChild("HumanoidRootPart") then
             table.insert(mobs, {
                 Name = mob.Name,
-                Distance = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                Dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
             })
         end
     end
 
-    table.sort(mobs, function(a,b) return a.Distance < b.Distance end)
+    table.sort(mobs, function(a, b)
+        return a.Dist < b.Dist
+    end)
 
     local values = {}
     for _, mob in ipairs(mobs) do
@@ -158,15 +166,71 @@ task.spawn(function()
     end
 end)
 
-local AutoFarmToggle = Tabs.Quests:AddToggle("MyToggle9", 
-{
-    Title = "AutoFarm Mob", 
-    Default = false
+-- ⚔️ AUTOFARM (DEPENDS ON DROPDOWN)
+Tabs.Quests:AddToggle("AutoFarmToggle", {
+    Title = "AutoFarm Mob",
+    Default = false,
     Callback = function(state)
-	if state then
-	    print("Toggle On")
-	else
-	    print("Toggle Off")
+        running = state
+        if not state then return end
+
+        if not SelectedMobName then
+            Fluent:Notify({
+                Title = "AutoFarm",
+                Content = "Select a mob first.",
+                Duration = 3
+            })
+            running = false
+            return
         end
-    end 
+
+        task.spawn(function()
+            local playerHRP = player.Character:WaitForChild("HumanoidRootPart")
+            local SkillRemote = ReplicatedStorage.Remotes.SkillRemote
+
+            local punchArgs = {
+                {
+                    SkillId = "1",
+                    Began = true,
+                    ["Typ\208\181"] = 1
+                }
+            }
+
+            local function getNearestSelectedMob()
+                local nearest, dist = nil, math.huge
+                for _, mob in ipairs(mobsFolder:GetChildren()) do
+                    if mob.Name == SelectedMobName
+                    and mob:FindFirstChild("HumanoidRootPart") then
+                        local d = (playerHRP.Position - mob.HumanoidRootPart.Position).Magnitude
+                        if d < dist then
+                            dist = d
+                            nearest = mob
+                        end
+                    end
+                end
+                return nearest
+            end
+
+            while running do
+                local mob = getNearestSelectedMob()
+                if not mob then
+                    task.wait(0.1)
+                    continue
+                end
+
+                while mob.Parent and running do
+                    local mhrp = mob.HumanoidRootPart
+                    local backPos = mhrp.Position - mhrp.CFrame.LookVector * 5
+                    playerHRP.CFrame = CFrame.new(backPos, mhrp.Position)
+
+                    SkillRemote:FireServer(unpack(punchArgs))
+                    task.wait(0.05) -- 🔥 SAME SPEED YOU ASKED
+                end
+
+                punchArgs[1].Began = false
+                SkillRemote:FireServer(unpack(punchArgs))
+                punchArgs[1].Began = true
+            end
+        end)
+    end
 })

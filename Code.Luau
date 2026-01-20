@@ -239,8 +239,7 @@ local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
 
 local DropdownFarmSetting = Tabs.Quests:AddDropdown("DropdownAutoFarm", {
     Title = "AutoFarm Position",
-    Description = "Dropdown description",
     Values = {"Under", "Front", "Back", "Upper"},
     Multi = false,
-    Default = Back,
+    Default = "Back",
 })

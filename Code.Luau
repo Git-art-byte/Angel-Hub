@@ -157,3 +157,16 @@ task.spawn(function()
         task.wait(0.7)
     end
 end)
+
+local AutoFarmToggle = Tabs.Quests:AddToggle("MyToggle9", 
+{
+    Title = "AutoFarm Mob", 
+    Default = false
+    Callback = function(state)
+	if state then
+	    print("Toggle On")
+	else
+	    print("Toggle Off")
+        end
+    end 
+})

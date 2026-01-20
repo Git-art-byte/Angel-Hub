@@ -300,7 +300,7 @@ local SectionJ = Tabs.Worlds:AddSection("AFK World")
 Tabs.Worlds:AddButton({
     Title = "Join",
     Callback = function()
-        
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [AFK World]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 6},"Join")
     end
 })
 
@@ -308,6 +308,6 @@ local SectionK = Tabs.Worlds:AddSection("Trade Hub")
 Tabs.Worlds:AddButton({
     Title = "Join",
     Callback = function()
-        
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Trade Hub]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 7},"Join")
     end
 })

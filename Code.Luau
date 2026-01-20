@@ -118,7 +118,7 @@ local running = false
 
 -- 🔽 NEAREST MOB DROPDOWN (REQUIRED)
 local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
-    Title = "Nearest Mob",
+    Title = "Select Mob",
     Values = {},
     Multi = false,
     Default = nil,

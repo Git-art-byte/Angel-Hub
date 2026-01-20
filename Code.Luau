@@ -17,8 +17,9 @@ Fluent:Notify({
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Main = Window:AddTab({ Title = "Training", Icon = "home" }),
     Quests = Window:AddTab({ Title = "AutoFarm", Icon = "badge-info" }),
+    Worlds = Window:AddTab({ Title = "Worlds", Icon = "earth" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -252,5 +253,21 @@ Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     Default = 3,
     Callback = function(value)
         AutoFarmPosition = value
+    end
+})
+
+local SectionD = Tabs.Worlds:AddSection("Main World")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PromptService.RE.Prompt:FireServer({["UniqueTag"] = "TeleporterGui",["Description"] = "Join World [Main World]?",["LeftButton"] = "Join",["Timer"] = 30,["Prompt"] = "TeleportDirect",["RightButton"] = "Cancel",["PlaceDataId"] = 1},"Join")
+    end
+})
+
+local SectionE = Tabs.Worlds:AddSection("Crimson Planet")
+Tabs.Worlds:AddButton({
+    Title = "Join",
+    Callback = function()
+        j
     end
 })

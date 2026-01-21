@@ -17,8 +17,8 @@ Fluent:Notify({
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Training", Icon = "home" }),
-    Quests = Window:AddTab({ Title = "AutoFarm", Icon = "badge-info" }),
+    Main = Window:AddTab({ Title = "Training", Icon = "biceps-flexed" }),
+    Quests = Window:AddTab({ Title = "AutoFarm", Icon = "tractor" }),
     Worlds = Window:AddTab({ Title = "Worlds", Icon = "earth" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }

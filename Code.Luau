@@ -256,6 +256,13 @@ Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     end
 })
 
+local NearestBossDropdown = Tabs.Quests:AddDropdown("NearestBossDropdown", {
+    Title = "AutoFarm Type",
+    Values = {"Mobs", "Boss"},
+    Multi = false,
+    Default = "Mobs",
+})
+
 local SectionD = Tabs.Worlds:AddSection("Main World")
 Tabs.Worlds:AddButton({
     Title = "Join",

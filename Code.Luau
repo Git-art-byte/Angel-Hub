@@ -12,7 +12,7 @@ local Window = Fluent:CreateWindow({
 
 -- Connect the toggle button to Fluent
 ToggleButton.MouseButton1Click:Connect(function()
-    Window:Toggle()
+    Fluent:Toggle()
 end)
 
 Fluent:Notify({

@@ -290,6 +290,22 @@ Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     end
 })
 
+Tabs.Quests:AddToggle("AutoRebirthToogle", {
+    Title = "AutoRebirth", 
+    Default = false,
+    Callback = function(state)
+	if state then
+	    _G.AutoRebirth = true
+        while _G.AutoRebirth do
+        task.wait(0.09)
+          game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PlayerLevelService.RF.RequestRebirth:InvokeServer(true)
+        end
+	else
+	    _G.AutoFarm = false
+        end
+    end 
+})
+
 local SectionD = Tabs.Worlds:AddSection("Main World")
 Tabs.Worlds:AddButton({
     Title = "Join",

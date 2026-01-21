@@ -11,6 +11,8 @@ designed using localmaze gui creator
 
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
 local LMG2L = {}
 
@@ -39,9 +41,16 @@ LMG2L["UICorner_3"].CornerRadius = UDim.new(0, 15)
 
 -- 🔑 LeftShift simulation (MERGED)
 LMG2L["TextButton_2"].MouseButton1Click:Connect(function()
+    -- Simulate LeftControl
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+
+    -- FORCE mobile controls back
+    if UserInputService.TouchEnabled then
+        task.wait() -- let Roblox finish input switch
+        StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.TouchControls, true)
+    end
 end)
 
 return LMG2L["ScreenGui_1"], require

@@ -1,5 +1,4 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local ToggleButton = loadstring(game:HttpGet("https://raw.githubusercontent.com/Git-art-byte/Angel-Hub/refs/heads/main/Toogle.Luau"))()
 local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB | Dragon Blox" .. Fluent.Version,
     SubTitle = "by Ange",
@@ -9,11 +8,6 @@ local Window = Fluent:CreateWindow({
     Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
-
--- Connect the toggle button to Fluent
-ToggleButton.MouseButton1Click:Connect(function()
-    Fluent:Toggle()
-end)
 
 Fluent:Notify({
     Title = "Loaded!",

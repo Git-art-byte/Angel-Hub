@@ -14,7 +14,8 @@ LMG2L["VisibilityToogle"].FontFace = Font.new([[rbxasset://fonts/families/Gotham
 LMG2L["VisibilityToogle"].BackgroundTransparency = 0.17
 LMG2L["VisibilityToogle"].Size = UDim2.new(0, 76, 0, 40)
 LMG2L["VisibilityToogle"].Text = [[]]
-LMG2L["VisibilityToogle"].Position = UDim2.new(0, 8, 0, 22)
+LMG2L["VisibilityToogle"].Position = UDim2.new(0.5, 0, 0, 0)
+LMG2L["VisibilityToogle"].AnchorPoint = UDim2.new(0.5, 0.5)
 
 local UICorner = Instance.new("UICorner", LMG2L["VisibilityToogle"])
 UICorner.CornerRadius = UDim.new(0, 12)

@@ -10,7 +10,7 @@ designed using localmaze gui creator
 ]=]
 
 local Players = game:GetService("Players")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/Git-art-byte/Angel-Hub/refs/heads/main/Code.Luau"))()
 
 local LMG2L = {}
 

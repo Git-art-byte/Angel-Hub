@@ -300,7 +300,7 @@ Tabs.Quests:AddToggle("AutoRebirthToogle", {
           game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PlayerLevelService.RF.RequestRebirth:InvokeServer(true)
         end
 	else
-	    _G.AutoFarm = false
+	    _G.AutoRebirth = false
         end
     end 
 })

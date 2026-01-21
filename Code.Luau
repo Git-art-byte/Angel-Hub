@@ -106,13 +106,17 @@ local TrainToggle = Tabs.Main:AddToggle("TrainToggle", {
 ----------------------------------------------------------------
 -- AUTOFARM
 ----------------------------------------------------------------
-local SectionB = Tabs.Quests:AddSection("Evee")
+local SectionB = Tabs.Quests:AddSection("AutoFarm")
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
 local SelectedMobName = nil
 local running = false
 local AutoFarmPosition = "Back"
+local AutoFarmType = "Mobs"
 
--- Nearest Mob Dropdown
+-- Nearest Mob / Boss Dropdown
 local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     Title = "Select Mob",
     Values = {},
@@ -123,29 +127,40 @@ local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
     end
 })
 
--- Update Nearest Mobs continuously
-local function updateNearestMobs()
-    local char = game.Players.LocalPlayer.Character
+-- Helper: get correct folder
+local function getCurrentFolder()
+    if AutoFarmType == "Boss" then
+        return workspace["World Mobs"]["Boss Mobs"]
+    end
+    return workspace["World Mobs"].Mobs
+end
+
+-- Update nearest dropdown
+local function updateNearestTargets()
+    local char = player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    local mobs, added = {}, {}
+    local folder = getCurrentFolder()
+    if not folder then return end
 
-    for _, mob in ipairs(workspace["World Mobs"].Mobs:GetChildren()) do
+    local list, added = {}, {}
+
+    for _, mob in ipairs(folder:GetChildren()) do
         if mob:FindFirstChild("HumanoidRootPart") then
-            table.insert(mobs, {
+            table.insert(list, {
                 Name = mob.Name,
                 Dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
             })
         end
     end
 
-    table.sort(mobs, function(a, b)
+    table.sort(list, function(a, b)
         return a.Dist < b.Dist
     end)
 
     local values = {}
-    for _, mob in ipairs(mobs) do
+    for _, mob in ipairs(list) do
         if not added[mob.Name] then
             added[mob.Name] = true
             table.insert(values, mob.Name)
@@ -157,14 +172,14 @@ end
 
 task.spawn(function()
     while true do
-        updateNearestMobs()
+        updateNearestTargets()
         task.wait(0.7)
     end
 end)
 
 -- AutoFarm Toggle
 Tabs.Quests:AddToggle("AutoFarmToggle", {
-    Title = "AutoFarm Mob",
+    Title = "AutoFarm",
     Default = false,
     Callback = function(state)
         running = state
@@ -173,7 +188,7 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
         if not SelectedMobName then
             Fluent:Notify({
                 Title = "AutoFarm",
-                Content = "Select a mob first.",
+                Content = "Select a Mob first.",
                 Duration = 3
             })
             running = false
@@ -181,7 +196,7 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
         end
 
         task.spawn(function()
-            local playerHRP = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+            local hrp = player.Character:WaitForChild("HumanoidRootPart")
             local SkillRemote = game:GetService("ReplicatedStorage").Remotes.SkillRemote
 
             local punchArgs = {
@@ -192,33 +207,37 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
                 }
             }
 
-            local function getNearestSelectedMob()
+            local function getNearestSelected()
+                local folder = getCurrentFolder()
                 local nearest, dist = nil, math.huge
-                for _, mob in ipairs(workspace["World Mobs"].Mobs:GetChildren()) do
-                    if mob.Name == SelectedMobName and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChildOfClass("Humanoid") then
-                        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-                        if humanoid.Health > 0 then
-                            local d = (playerHRP.Position - mob.HumanoidRootPart.Position).Magnitude
-                            if d < dist then
-                                dist = d
-                                nearest = mob
-                            end
+
+                for _, mob in ipairs(folder:GetChildren()) do
+                    local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                    local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
+                    if mob.Name == SelectedMobName and humanoid and humanoid.Health > 0 and mhrp then
+                        local d = (hrp.Position - mhrp.Position).Magnitude
+                        if d < dist then
+                            dist = d
+                            nearest = mob
                         end
                     end
                 end
+
                 return nearest
             end
 
             while running do
-                local mob = getNearestSelectedMob()
+                local mob = getNearestSelected()
                 if not mob then
                     task.wait(0.1)
                     continue
                 end
 
                 local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
                 while humanoid and humanoid.Health > 0 and running do
-                    local mhrp = mob.HumanoidRootPart
                     local pos
                     if AutoFarmPosition == "Back" then
                         pos = mhrp.Position - mhrp.CFrame.LookVector * 5
@@ -230,7 +249,7 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
                         pos = mhrp.Position + Vector3.new(0, 5, 0)
                     end
 
-                    playerHRP.CFrame = CFrame.new(pos, mhrp.Position)
+                    hrp.CFrame = CFrame.new(pos, mhrp.Position)
                     SkillRemote:FireServer(unpack(punchArgs))
                     task.wait(0.05)
                 end
@@ -243,24 +262,32 @@ Tabs.Quests:AddToggle("AutoFarmToggle", {
     end
 })
 
--- AutoFarm Position Dropdown under a separate section
+----------------------------------------------------------------
+-- AUTOFARM SETTINGS
+----------------------------------------------------------------
 local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
+
+Tabs.Quests:AddDropdown("AutoFarmTypeDropdown", {
+    Title = "AutoFarm Type",
+    Values = {"Mobs", "Boss"},
+    Multi = false,
+    Default = "Mobs",
+    Callback = function(value)
+        AutoFarmType = value
+        SelectedMobName = nil
+        NearestMobsDropdown:SetValues({})
+        NearestMobsDropdown:SetValue(nil)
+    end
+})
 
 Tabs.Quests:AddDropdown("AutoFarmPositionDropdown", {
     Title = "AutoFarm Position",
     Values = {"Under", "Front", "Back", "Upper"},
     Multi = false,
-    Default = 3,
+    Default = "Back",
     Callback = function(value)
         AutoFarmPosition = value
     end
-})
-
-local NearestBossDropdown = Tabs.Quests:AddDropdown("NearestBossDropdown", {
-    Title = "AutoFarm Type",
-    Values = {"Mobs", "Boss"},
-    Multi = false,
-    Default = "Mobs",
 })
 
 local SectionD = Tabs.Worlds:AddSection("Main World")

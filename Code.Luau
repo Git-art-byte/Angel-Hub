@@ -1,4 +1,5 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Toogle = loadstring(game:HttpGet("https://raw.githubusercontent.com/Git-art-byte/Angel-Hub/main/Toogle.Luau"))()
 local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB | Dragon Blox" .. Fluent.Version,
     SubTitle = "by Ange",

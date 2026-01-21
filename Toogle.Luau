@@ -39,9 +39,7 @@ LMG2L["UICorner_3"].CornerRadius = UDim.new(0, 15)
 
 -- 🔑 LeftShift simulation (MERGED)
 LMG2L["TextButton_2"].MouseButton1Click:Connect(function()
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
-    task.wait(0.05)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+    Fluent:Visible
 end)
 
 return LMG2L["ScreenGui_1"], require

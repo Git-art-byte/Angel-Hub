@@ -31,7 +31,7 @@ LMG2L["TextButton_2"].FontFace = Font.new(
 LMG2L["TextButton_2"].AnchorPoint = Vector2.new(0.5, 0.5)
 LMG2L["TextButton_2"].BackgroundTransparency = 0.2
 LMG2L["TextButton_2"].Size = UDim2.new(0, 168, 0, 58)
-LMG2L["TextButton_2"].Text = "LeftShift"
+LMG2L["TextButton_2"].Text = ""
 LMG2L["TextButton_2"].Position = UDim2.new(0.5, 0, 0.1, 0)
 
 LMG2L["UICorner_3"] = Instance.new("UICorner", LMG2L["TextButton_2"])
@@ -39,9 +39,9 @@ LMG2L["UICorner_3"].CornerRadius = UDim.new(0, 15)
 
 -- 🔑 LeftShift simulation (MERGED)
 LMG2L["TextButton_2"].MouseButton1Click:Connect(function()
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
     task.wait(0.05)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
 end)
 
 return LMG2L["ScreenGui_1"], require

@@ -268,7 +268,7 @@ local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
 
 Tabs.Quests:AddDropdown("AutoFarmTypeDropdown", {
     Title = "AutoFarm Type",
-    Values = {"Mobs", "Boss"},
+    Values = {"Mobs", "Boss", "Raid Boss"},
     Multi = false,
     Default = "Mobs",
     Callback = function(value)

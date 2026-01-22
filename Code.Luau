@@ -130,10 +130,11 @@ local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
 local function getCurrentFolder()
     if AutoFarmType == "Boss" then
         return workspace["World Mobs"]["Boss Mobs"]
+    elseif AutoFarmType == "Raid Boss" then
+        return workspace["World Mobs"]["Event Mobs"]
     end
     return workspace["World Mobs"].Mobs
 end
-
 -- Update nearest dropdown
 local function updateNearestTargets()
     local char = player.Character

@@ -130,7 +130,7 @@ local NearestMobsDropdown = Tabs.Quests:AddDropdown("NearestMobsDropdown", {
 local function getCurrentFolder()
     if AutoFarmType == "Boss" then
         return workspace["World Mobs"]["Boss Mobs"]
-    elseif AutoFarmType == "Raid Boss" then
+    elseif AutoFarmType == "Event" then
         return workspace["World Mobs"]["Event Mobs"]
     end
     return workspace["World Mobs"].Mobs
@@ -269,7 +269,7 @@ local SectionC = Tabs.Quests:AddSection("AutoFarm Settings")
 
 Tabs.Quests:AddDropdown("AutoFarmTypeDropdown", {
     Title = "AutoFarm Type",
-    Values = {"Mobs", "Boss", "Raid Boss"},
+    Values = {"Mobs", "Boss", "Event"},
     Multi = false,
     Default = "Mobs",
     Callback = function(value)

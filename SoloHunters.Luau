@@ -32,24 +32,24 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 local SectionA = Tabs.Main:AddSection("AutoFarm")
 
---// Services
+--// SERVICES
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
---// Variables
-local SelectedMobs = {}
+--// VARIABLES
+local SelectedMobs = {} -- dictionary: [mobName] = true
 local running = false
 local AutoFarmPosition = "Back"
 
---// Combat Remote
+--// REMOTES
 local CombatRemote = ReplicatedStorage
     .RemoteServices
     .CombatService
     .RF
     .UseWeapon
 
---// Mob Folder
+--// MOB FOLDER
 local MobFolder = workspace:WaitForChild("Mobs")
 
 ------------------------------------------------
@@ -63,7 +63,18 @@ local MultiNearestMobDropdown = Tabs.Main:AddDropdown("MultiNearestMobDropdown",
     Multi = true,
     Default = {},
     Callback = function(values)
-        SelectedMobs = values
+        SelectedMobs = values or {}
+    end
+})
+
+-- AutoFarm Position
+Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
+    Title = "AutoFarm Position",
+    Values = {"Under", "Front", "Back", "Upper"},
+    Multi = false,
+    Default = "Back",
+    Callback = function(value)
+        AutoFarmPosition = value
     end
 })
 
@@ -74,7 +85,7 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     Callback = function(state)
         running = state
 
-        if state and (#SelectedMobs == 0) then
+        if state and not hasSelectedMobs() then
             Fluent:Notify({
                 Title = "AutoFarm",
                 Content = "Select at least one mob.",
@@ -90,21 +101,21 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
--- Position Dropdown
-Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
-    Title = "AutoFarm Position",
-    Values = {"Under", "Front", "Back", "Upper"},
-    Multi = false,
-    Default = "Back",
-    Callback = function(value)
-        AutoFarmPosition = value
+------------------------------------------------
+-- HELPERS
+------------------------------------------------
+
+-- Check if at least one mob selected
+function hasSelectedMobs()
+    for _, v in pairs(SelectedMobs) do
+        if v == true then
+            return true
+        end
     end
-})
+    return false
+end
 
-------------------------------------------------
--- Helpers
-------------------------------------------------
-
+-- Update dropdown values
 local function updateMobDropdown()
     local names, added = {}, {}
 
@@ -132,7 +143,7 @@ local function getNearestSelectedMob(hrp)
     local nearest, dist = nil, math.huge
 
     for _, mob in ipairs(MobFolder:GetChildren()) do
-        if table.find(SelectedMobs, mob.Name) then
+        if SelectedMobs[mob.Name] then
             local humanoid = mob:FindFirstChildOfClass("Humanoid")
             local mhrp = mob:FindFirstChild("HumanoidRootPart")
 
@@ -163,7 +174,7 @@ local function getFarmPosition(mhrp)
 end
 
 ------------------------------------------------
--- AutoFarm Core
+-- AUTO FARM CORE
 ------------------------------------------------
 
 function startAutoFarm()

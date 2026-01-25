@@ -45,6 +45,7 @@ local player = Players.LocalPlayer
 local SelectedMobs = {} -- dictionary [mobName] = true
 local running = false
 local AutoFarmPosition = "Back"
+local attacking = false
 
 ------------------------------------------------
 -- MOB FOLDER
@@ -94,9 +95,12 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
             return
         end
 
-        if state then
-            startAutoFarm()
+        if not state then
+            stopAttack()
+            return
         end
+
+        startAutoFarm()
     end
 })
 
@@ -173,18 +177,26 @@ local function getFarmPosition(mhrp)
 end
 
 ------------------------------------------------
--- ATTACK (SIMULATED SCREEN TAP)
+-- ATTACK (HOLD INPUT)
 ------------------------------------------------
-local function attack()
+
+local function startAttack()
+    if attacking then return end
+    attacking = true
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(0, 0))
-    task.wait()
+end
+
+local function stopAttack()
+    if not attacking then return end
+    attacking = false
     VirtualUser:Button1Up(Vector2.new(0, 0))
 end
 
 ------------------------------------------------
 -- AUTO FARM CORE
 ------------------------------------------------
+
 function startAutoFarm()
     task.spawn(function()
         local char = player.Character or player.CharacterAdded:Wait()
@@ -193,6 +205,7 @@ function startAutoFarm()
         while running do
             local mob = getNearestSelectedMob(hrp)
             if not mob then
+                stopAttack()
                 task.wait(0.1)
                 continue
             end
@@ -204,12 +217,15 @@ function startAutoFarm()
                 local pos = getFarmPosition(mhrp)
                 hrp.CFrame = CFrame.new(pos, mhrp.Position)
 
-                attack() -- 👈 real input tap
+                startAttack() -- HOLD attack
 
-                task.wait(0.12) -- safe for mobile
+                task.wait(0.1)
             end
 
+            stopAttack() -- RELEASE when mob dies
             task.wait(0.1)
         end
+
+        stopAttack()
     end)
 end

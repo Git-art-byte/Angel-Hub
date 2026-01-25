@@ -32,24 +32,23 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 local SectionA = Tabs.Main:AddSection("AutoFarm")
 
---// SERVICES
+------------------------------------------------
+-- SERVICES
+------------------------------------------------
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 
---// VARIABLES
-local SelectedMobs = {} -- dictionary: [mobName] = true
+------------------------------------------------
+-- VARIABLES
+------------------------------------------------
+local SelectedMobs = {} -- dictionary [mobName] = true
 local running = false
 local AutoFarmPosition = "Back"
 
---// REMOTES
-local CombatRemote = ReplicatedStorage
-    .RemoteServices
-    .CombatService
-    .RF
-    .UseWeapon
-
---// MOB FOLDER
+------------------------------------------------
+-- MOB FOLDER
+------------------------------------------------
 local MobFolder = workspace:WaitForChild("Mobs")
 
 ------------------------------------------------
@@ -174,9 +173,18 @@ local function getFarmPosition(mhrp)
 end
 
 ------------------------------------------------
+-- ATTACK (SIMULATED SCREEN TAP)
+------------------------------------------------
+local function attack()
+    VirtualUser:CaptureController()
+    VirtualUser:Button1Down(Vector2.new(0, 0))
+    task.wait()
+    VirtualUser:Button1Up(Vector2.new(0, 0))
+end
+
+------------------------------------------------
 -- AUTO FARM CORE
 ------------------------------------------------
-
 function startAutoFarm()
     task.spawn(function()
         local char = player.Character or player.CharacterAdded:Wait()
@@ -196,10 +204,9 @@ function startAutoFarm()
                 local pos = getFarmPosition(mhrp)
                 hrp.CFrame = CFrame.new(pos, mhrp.Position)
 
-                -- Attack
-                CombatRemote:InvokeServer(0, {}, 1)
+                attack() -- 👈 real input tap
 
-                task.wait(0.05)
+                task.wait(0.12) -- safe for mobile
             end
 
             task.wait(0.1)

@@ -1,51 +1,45 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+------------------------------------------------
+-- FLUENT UI SETUP
+------------------------------------------------
+local Fluent = loadstring(game:HttpGet(
+    "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
+))()
+
 local Window = Fluent:CreateWindow({
     Title = "Angel Hub | Solo Hunters " .. Fluent.Version,
     SubTitle = "by dawid",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 320),
-    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
+    Acrylic = true,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 Fluent:Notify({
-        Title = "Loaded!",
-        Content = "Angel Hub succesfuly Loaded",
-        Duration = 5 -- Set to nil to make the notification not disappear
+    Title = "Loaded!",
+    Content = "Angel Hub successfully loaded",
+    Duration = 5
 })
 
--- Fluent provides Lucide Icons, they are optional
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-local SectionA = Tabs.Main:AddSection("AutoFarm")
-
 ------------------------------------------------
 -- SERVICES
 ------------------------------------------------
 local Players = game:GetService("Players")
-local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 
 ------------------------------------------------
 -- VARIABLES
 ------------------------------------------------
-local SelectedMobs = {} -- dictionary [mobName] = true
+local SelectedMobs = {}
 local running = false
-local AutoFarmPosition = "Back"
 local attacking = false
+local AutoFarmPosition = "Back"
+local WEAPON_NAME = "Kasaka's Venom Fang"
 
 ------------------------------------------------
 -- MOB FOLDER
@@ -55,102 +49,70 @@ local MobFolder = workspace:WaitForChild("Mobs")
 ------------------------------------------------
 -- UI
 ------------------------------------------------
+Tabs.Main:AddSection("AutoFarm")
 
--- Multi Mob Dropdown
-local MultiNearestMobDropdown = Tabs.Main:AddDropdown("MultiNearestMobDropdown", {
+local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     Title = "Select Mob",
     Values = {},
     Multi = true,
     Default = {},
-    Callback = function(values)
-        SelectedMobs = values or {}
+    Callback = function(v)
+        SelectedMobs = v or {}
     end
 })
 
--- AutoFarm Position
-Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
-    Title = "AutoFarm Position",
-    Values = {"Under", "Front", "Back", "Upper"},
-    Multi = false,
+Tabs.Main:AddDropdown("PositionDropdown", {
+    Title = "Position",
+    Values = {"Back", "Front", "Under", "Upper"},
     Default = "Back",
-    Callback = function(value)
-        AutoFarmPosition = value
+    Callback = function(v)
+        AutoFarmPosition = v
     end
 })
 
--- AutoFarm Toggle
 Tabs.Main:AddToggle("AutoFarmToggle", {
-    Title = "AutoFarm",
+    Title = "Auto Farm",
     Default = false,
-    Callback = function(state)
-        running = state
-
-        if state and not hasSelectedMobs() then
-            Fluent:Notify({
-                Title = "AutoFarm",
-                Content = "Select at least one mob.",
-                Duration = 3
-            })
-            running = false
-            return
-        end
-
-        if not state then
+    Callback = function(v)
+        running = v
+        if not v then
             stopAttack()
-            return
+        else
+            startAutoFarm()
         end
-
-        startAutoFarm()
     end
 })
 
 ------------------------------------------------
 -- HELPERS
 ------------------------------------------------
-
--- Check if at least one mob selected
-function hasSelectedMobs()
-    for _, v in pairs(SelectedMobs) do
-        if v == true then
-            return true
-        end
-    end
-    return false
-end
-
--- Update dropdown values
-local function updateMobDropdown()
-    local names, added = {}, {}
-
+local function updateMobList()
+    local names, seen = {}, {}
     for _, mob in ipairs(MobFolder:GetChildren()) do
         if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
-            if not added[mob.Name] then
-                added[mob.Name] = true
+            if not seen[mob.Name] then
+                seen[mob.Name] = true
                 table.insert(names, mob.Name)
             end
         end
     end
-
     table.sort(names)
-    MultiNearestMobDropdown:SetValues(names)
+    MobDropdown:SetValues(names)
 end
 
 task.spawn(function()
     while task.wait(1) do
-        updateMobDropdown()
+        updateMobList()
     end
 end)
 
--- Get nearest selected mob
-local function getNearestSelectedMob(hrp)
+local function getNearestMob(hrp)
     local nearest, dist = nil, math.huge
-
     for _, mob in ipairs(MobFolder:GetChildren()) do
         if SelectedMobs[mob.Name] then
-            local humanoid = mob:FindFirstChildOfClass("Humanoid")
+            local hum = mob:FindFirstChildOfClass("Humanoid")
             local mhrp = mob:FindFirstChild("HumanoidRootPart")
-
-            if humanoid and humanoid.Health > 0 and mhrp then
+            if hum and hum.Health > 0 and mhrp then
                 local d = (hrp.Position - mhrp.Position).Magnitude
                 if d < dist then
                     dist = d
@@ -159,71 +121,85 @@ local function getNearestSelectedMob(hrp)
             end
         end
     end
-
     return nearest
 end
 
--- Position logic
-local function getFarmPosition(mhrp)
+local function getPosition(mhrp)
     if AutoFarmPosition == "Back" then
-        return mhrp.Position - mhrp.CFrame.LookVector * 5
+        return mhrp.Position - mhrp.CFrame.LookVector * 4
     elseif AutoFarmPosition == "Front" then
-        return mhrp.Position + mhrp.CFrame.LookVector * 5
+        return mhrp.Position + mhrp.CFrame.LookVector * 4
     elseif AutoFarmPosition == "Under" then
-        return mhrp.Position - Vector3.new(0, 5, 0)
+        return mhrp.Position - Vector3.new(0, 4, 0)
     elseif AutoFarmPosition == "Upper" then
-        return mhrp.Position + Vector3.new(0, 5, 0)
+        return mhrp.Position + Vector3.new(0, 4, 0)
     end
 end
 
 ------------------------------------------------
--- ATTACK (HOLD INPUT)
+-- WEAPON HANDLING (NO UNEQUIP LOOP)
 ------------------------------------------------
+local function getWeapon()
+    local char = player.Character
+    if not char then return nil end
 
-local function startAttack()
-    if attacking then return end
-    attacking = true
-    VirtualUser:CaptureController()
-    VirtualUser:Button1Down(Vector2.new(0, 0))
+    local tool = char:FindFirstChild(WEAPON_NAME)
+    if tool then return tool end
+
+    local bpTool = player.Backpack:FindFirstChild(WEAPON_NAME)
+    if bpTool then
+        bpTool.Parent = char
+        return bpTool
+    end
+
+    return nil
 end
 
-local function stopAttack()
-    if not attacking then return end
+function startAttack()
+    if attacking then return end
+    attacking = true
+
+    task.spawn(function()
+        while attacking do
+            local tool = getWeapon()
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.12)
+        end
+    end)
+end
+
+function stopAttack()
     attacking = false
-    VirtualUser:Button1Up(Vector2.new(0, 0))
 end
 
 ------------------------------------------------
 -- AUTO FARM CORE
 ------------------------------------------------
-
 function startAutoFarm()
     task.spawn(function()
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
 
         while running do
-            local mob = getNearestSelectedMob(hrp)
+            local mob = getNearestMob(hrp)
             if not mob then
                 stopAttack()
                 task.wait(0.1)
                 continue
             end
 
-            local humanoid = mob:FindFirstChildOfClass("Humanoid")
+            local hum = mob:FindFirstChildOfClass("Humanoid")
             local mhrp = mob:FindFirstChild("HumanoidRootPart")
 
-            while humanoid and humanoid.Health > 0 and running do
-                local pos = getFarmPosition(mhrp)
-                hrp.CFrame = CFrame.new(pos, mhrp.Position)
-
-                startAttack() -- HOLD attack
-
+            while hum and hum.Health > 0 and running do
+                hrp.CFrame = CFrame.new(getPosition(mhrp), mhrp.Position)
+                startAttack()
                 task.wait(0.1)
             end
 
-            stopAttack() -- RELEASE when mob dies
-            task.wait(0.1)
+            stopAttack()
         end
 
         stopAttack()

@@ -32,26 +32,65 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 local SectionA = Tabs.Main:AddSection("AutoFarm")
 
+--// Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+--// Variables
+local SelectedMobs = {}
+local running = false
+local AutoFarmPosition = "Back"
+
+--// Combat Remote
+local CombatRemote = ReplicatedStorage
+    .RemoteServices
+    .CombatService
+    .RF
+    .UseWeapon
+
+--// Mob Folder
+local MobFolder = workspace:WaitForChild("Mobs")
+
+------------------------------------------------
+-- UI
+------------------------------------------------
+
+-- Multi Mob Dropdown
 local MultiNearestMobDropdown = Tabs.Main:AddDropdown("MultiNearestMobDropdown", {
-   Title = "Select Mob",
-   Values = {},
-   Multi = true,
-   Default = {},
+    Title = "Select Mob",
+    Values = {},
+    Multi = true,
+    Default = {},
+    Callback = function(values)
+        SelectedMobs = values
+    end
 })
 
-local AutoFarmToggle = Tab:AddToggle("AutoFarmToggle", 
-{
+-- AutoFarm Toggle
+Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm",
-    Default = false
+    Default = false,
     Callback = function(state)
-	if state then
-	    print("Toggle On")
-	else
-	    print("Toggle Off")
+        running = state
+
+        if state and (#SelectedMobs == 0) then
+            Fluent:Notify({
+                Title = "AutoFarm",
+                Content = "Select at least one mob.",
+                Duration = 3
+            })
+            running = false
+            return
         end
-    end 
+
+        if state then
+            startAutoFarm()
+        end
+    end
 })
 
+-- Position Dropdown
 Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
     Title = "AutoFarm Position",
     Values = {"Under", "Front", "Back", "Upper"},
@@ -61,3 +100,98 @@ Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
         AutoFarmPosition = value
     end
 })
+
+------------------------------------------------
+-- Helpers
+------------------------------------------------
+
+local function updateMobDropdown()
+    local names, added = {}, {}
+
+    for _, mob in ipairs(MobFolder:GetChildren()) do
+        if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
+            if not added[mob.Name] then
+                added[mob.Name] = true
+                table.insert(names, mob.Name)
+            end
+        end
+    end
+
+    table.sort(names)
+    MultiNearestMobDropdown:SetValues(names)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        updateMobDropdown()
+    end
+end)
+
+-- Get nearest selected mob
+local function getNearestSelectedMob(hrp)
+    local nearest, dist = nil, math.huge
+
+    for _, mob in ipairs(MobFolder:GetChildren()) do
+        if table.find(SelectedMobs, mob.Name) then
+            local humanoid = mob:FindFirstChildOfClass("Humanoid")
+            local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
+            if humanoid and humanoid.Health > 0 and mhrp then
+                local d = (hrp.Position - mhrp.Position).Magnitude
+                if d < dist then
+                    dist = d
+                    nearest = mob
+                end
+            end
+        end
+    end
+
+    return nearest
+end
+
+-- Position logic
+local function getFarmPosition(mhrp)
+    if AutoFarmPosition == "Back" then
+        return mhrp.Position - mhrp.CFrame.LookVector * 5
+    elseif AutoFarmPosition == "Front" then
+        return mhrp.Position + mhrp.CFrame.LookVector * 5
+    elseif AutoFarmPosition == "Under" then
+        return mhrp.Position - Vector3.new(0, 5, 0)
+    elseif AutoFarmPosition == "Upper" then
+        return mhrp.Position + Vector3.new(0, 5, 0)
+    end
+end
+
+------------------------------------------------
+-- AutoFarm Core
+------------------------------------------------
+
+function startAutoFarm()
+    task.spawn(function()
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        while running do
+            local mob = getNearestSelectedMob(hrp)
+            if not mob then
+                task.wait(0.1)
+                continue
+            end
+
+            local humanoid = mob:FindFirstChildOfClass("Humanoid")
+            local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
+            while humanoid and humanoid.Health > 0 and running do
+                local pos = getFarmPosition(mhrp)
+                hrp.CFrame = CFrame.new(pos, mhrp.Position)
+
+                -- Attack
+                CombatRemote:InvokeServer(0, {}, 1)
+
+                task.wait(0.05)
+            end
+
+            task.wait(0.1)
+        end
+    end)
+end

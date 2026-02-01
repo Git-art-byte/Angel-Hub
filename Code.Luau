@@ -297,7 +297,7 @@ Tabs.Quests:AddToggle("AutoRebirthToogle", {
 	if state then
 	    _G.AutoRebirth = true
         while _G.AutoRebirth do
-        task.wait(5)
+        task.wait(7)
           game:GetService("ReplicatedStorage").Packages._Index:FindFirstChild("sleitnick_knit@1.4.7").knit.Services.PlayerLevelService.RF.RequestRebirth:InvokeServer(true)
         end
 	else

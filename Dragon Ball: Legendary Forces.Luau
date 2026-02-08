@@ -28,54 +28,176 @@ InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
+AUTOFARM
 ----------------------------------------------------------------
--- TRAIN
-----------------------------------------------------------------
-local SectionA = Tabs.Main:AddSection("Train")
+local SectionB = Tabs.Quests:AddSection("AutoFarm")
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
-local SelectedSkill = "Mind Control"
-local Training = false
-local KiLoopRunning = false
+local SelectedMobName = nil
+local running = false
+local AutoFarmPosition = "Back"
+local AutoFarmType = "Mobs"
 
--- DROPDOWN
-Tabs.Main:AddDropdown("SkillDropdown", {
-    Title = "Training Type",
-    Values = {"Mind Control", "Ki Control"},
-    Default = 1,
+-- Nearest Mob / Boss Dropdown
+local NearestMobsDropdown = Tabs.Main:AddDropdown("NearestMobsDropdown", {
+    Title = "Select Mob",
+    Values = {},
     Multi = false,
+    Default = nil,
     Callback = function(value)
-        SelectedSkill = value
+        SelectedMobName = value
     end
 })
 
--- TOGGLE
-Tabs.Main:AddToggle("TrainToggle", {
-    Title = "Train",
+-- Helper: get correct folder
+local function getCurrentFolder()
+    if AutoFarmType == "Boss" then
+        return workspace["World Mobs"]["Boss Mobs"]
+    elseif AutoFarmType == "Event" then
+        return workspace["World Mobs"]["Event Mobs"]
+    end
+    return workspace["World Mobs"].Mobs
+end
+-- Update nearest dropdown
+local function updateNearestTargets()
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local folder = getCurrentFolder()
+    if not folder then return end
+
+    local list, added = {}, {}
+
+    for _, mob in ipairs(folder:GetChildren()) do
+        if mob:FindFirstChild("HumanoidRootPart") then
+            table.insert(list, {
+                Name = mob.Name,
+                Dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+            })
+        end
+    end
+
+    table.sort(list, function(a, b)
+        return a.Dist < b.Dist
+    end)
+
+    local values = {}
+    for _, mob in ipairs(list) do
+        if not added[mob.Name] then
+            added[mob.Name] = true
+            table.insert(values, mob.Name)
+        end
+    end
+
+    NearestMobsDropdown:SetValues(values)
+end
+
+task.spawn(function()
+    while true do
+        updateNearestTargets()
+        task.wait(0.7)
+    end
+end)
+
+-- AutoFarm Toggle
+Tabs.Main:AddToggle("AutoFarmToggle", {
+    Title = "AutoFarm",
     Default = false,
     Callback = function(state)
-        Training = state
+        running = state
+        if not state then return end
 
-        -- 🧠 MEDITATE (true / false only)
-        if SelectedSkill == "Mind Control" then
-            ReplicatedStorage.meditate:FireServer(state)
+        if not SelectedMobName then
+            Fluent:Notify({
+                Title = "AutoFarm",
+                Content = "Select a Mob first.",
+                Duration = 3
+            })
+            running = false
+            return
         end
 
-        -- 🔥 KI CONTROL (loop)
-        if SelectedSkill == "Ki Control" and state then
-            if KiLoopRunning then return end
-            KiLoopRunning = true
+        task.spawn(function()
+            local hrp = player.Character:WaitForChild("HumanoidRootPart")
+            local SkillRemote = game:GetService("ReplicatedStorage").Remotes.SkillRemote
 
-            task.spawn(function()
-                while Training and SelectedSkill == "Ki Control" do
-                    workspace.stalou0406["Genki Dama"].RemoteEvent:FireServer(
-                        "GenkiDama"
-                    )
-                    task.wait(1)
+            local punchArgs = {
+                {
+                    SkillId = "1",
+                    Began = true,
+                    ["Typ\208\181"] = 1
+                }
+            }
+
+            local function getNearestSelected()
+                local folder = getCurrentFolder()
+                local nearest, dist = nil, math.huge
+
+                for _, mob in ipairs(folder:GetChildren()) do
+                    local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                    local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
+                    if mob.Name == SelectedMobName and humanoid and humanoid.Health > 0 and mhrp then
+                        local d = (hrp.Position - mhrp.Position).Magnitude
+                        if d < dist then
+                            dist = d
+                            nearest = mob
+                        end
+                    end
                 end
-                KiLoopRunning = false
-            end)
-        end
+
+                return nearest
+            end
+
+            while running do
+                local mob = getNearestSelected()
+                if not mob then
+                    task.wait(0.1)
+                    continue
+                end
+
+                local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                local mhrp = mob:FindFirstChild("HumanoidRootPart")
+
+                while humanoid and humanoid.Health > 0 and running do
+                    local pos
+                    if AutoFarmPosition == "Back" then
+                        pos = mhrp.Position - mhrp.CFrame.LookVector * 5
+                    elseif AutoFarmPosition == "Front" then
+                        pos = mhrp.Position + mhrp.CFrame.LookVector * 5
+                    elseif AutoFarmPosition == "Under" then
+                        pos = mhrp.Position - Vector3.new(0, 5, 0)
+                    elseif AutoFarmPosition == "Upper" then
+                        pos = mhrp.Position + Vector3.new(0, 5, 0)
+                    end
+
+                    hrp.CFrame = CFrame.new(pos, mhrp.Position)
+                    SkillRemote:FireServer(unpack(punchArgs))
+                    task.wait(0.05)
+                end
+
+                punchArgs[1].Began = false
+                SkillRemote:FireServer(unpack(punchArgs))
+                punchArgs[1].Began = true
+            end
+        end)
+    end
+})
+
+----------------------------------------------------------------
+-- AUTOFARM SETTINGS
+----------------------------------------------------------------
+local SectionC = Tabs.Main:AddSection("AutoFarm Settings")
+
+Tabs.Main:AddDropdown("AutoFarmPositionDropdown", {
+    Title = "AutoFarm Position",
+    Values = {"Under", "Front", "Back", "Upper"},
+    Multi = false,
+    Default = "Back",
+    Callback = function(value)
+        AutoFarmPosition = value
     end
 })

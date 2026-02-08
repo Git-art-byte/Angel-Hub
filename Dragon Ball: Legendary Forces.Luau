@@ -38,11 +38,11 @@ local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.Activat
 -- ================= SETTINGS =================
 local TELEPORT_DELAY = 0.05
 local BACK_OFFSET = 3
-local running = true
+local AutoFarmEnabled = false
 local SelectedBossName = nil
 -- ============================================
 
--- Get boss names dynamically
+-- Get boss list
 local function getBossList()
 	local list = {}
 	local bossesFolder = workspace:FindFirstChild("Bosses")
@@ -57,7 +57,9 @@ local function getBossList()
 	return list
 end
 
--- Dropdown (UI)
+-- ================= UI =================
+
+-- Boss selector
 Tabs.Main:AddDropdown("BossSelectorDropdown", {
 	Title = "Select Boss",
 	Values = getBossList(),
@@ -68,7 +70,18 @@ Tabs.Main:AddDropdown("BossSelectorDropdown", {
 	end
 })
 
--- Helper: get selected boss
+-- Autofarm toggle
+Tabs.Main:AddToggle("AutoFarmToggle", {
+	Title = "Auto Farm Boss",
+	Default = false,
+	Callback = function(state)
+		AutoFarmEnabled = state
+	end
+})
+
+-- ================= LOGIC =================
+
+-- Get selected boss
 local function getBoss()
 	if not SelectedBossName then return end
 
@@ -86,18 +99,21 @@ end
 
 -- Autofarm loop
 task.spawn(function()
-	while running do
-		local character = player.Character
-		local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+	while true do
+		if AutoFarmEnabled then
+			local character = player.Character
+			local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
 
-		local boss, bossHrp, bossHumanoid = getBoss()
+			local boss, bossHrp, bossHumanoid = getBoss()
 
-		if playerHrp and bossHrp and bossHumanoid and bossHumanoid.Health > 0 then
-			-- Teleport behind boss
-			playerHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
+			-- Only farm if boss is alive
+			if playerHrp and bossHrp and bossHumanoid and bossHumanoid.Health > 0 then
+				-- Teleport slightly behind boss
+				playerHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
 
-			-- Attack
-			combatRemote:FireServer()
+				-- Attack
+				combatRemote:FireServer()
+			end
 		end
 
 		task.wait(TELEPORT_DELAY)

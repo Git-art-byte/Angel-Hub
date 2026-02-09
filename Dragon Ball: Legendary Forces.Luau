@@ -18,6 +18,7 @@ Fluent:Notify({
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
     }
 
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -79,6 +80,21 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 	end
 })
 
+Tabs.Misc:AddToggle("AutoKiToggle", {
+	Title = "AutoCharge KI",
+	Default = false,
+	Callback = function(state)
+		print("hello")
+	end
+})
+
+Tabs.Misc:AddToggle("AutoDBToggle", {
+	Title = "Auto Dragon Balls",
+	Default = false,
+	Callback = function(state)
+		print("hello")
+	end
+})
 -- ================= LOGIC =================
 
 -- Get selected boss

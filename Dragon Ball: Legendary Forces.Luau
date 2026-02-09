@@ -17,8 +17,8 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
@@ -81,15 +81,19 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 	end
 })
 
+Tabs.Main:AddToggle("AutoFarmToggle", {
+	Title = "AutoFarm",
+	Default = false,
+	Callback = function(state)
+		print("hello")
+	end
+})
+
 Tabs.Misc:AddToggle("AutoKiToggle", {
 	Title = "AutoCharge KI",
 	Default = false,
 	Callback = function(state)
 		AutoKiEnabled = state
-		ReplicatedStorage.IncreaseEnergyEvent:FireServer(
-			workspace.stalou0406.IAKiCharge.IsCharging,
-			not state
-		)
 	end
 })
 

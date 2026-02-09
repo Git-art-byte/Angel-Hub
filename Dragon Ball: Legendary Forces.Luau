@@ -174,3 +174,20 @@ task.spawn(function()
 		task.wait(0.5)
 	end
 end)
+
+task.spawn(function()
+	while true do
+		if AutoKiEnabled then
+			ReplicatedStorage.IncreaseEnergyEvent:FireServer(
+				workspace.stalou0406.IAKiCharge.IsCharging,
+				false
+			)
+		else
+			ReplicatedStorage.IncreaseEnergyEvent:FireServer(
+				workspace.stalou0406.IAKiCharge.IsCharging,
+				true
+			)
+		end
+		task.wait(0.3)
+	end
+end)

@@ -17,9 +17,9 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
-    }
+}
 
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -41,6 +41,9 @@ local TELEPORT_DELAY = 0.05
 local BACK_OFFSET = 3
 local AutoFarmEnabled = false
 local SelectedBossName = nil
+
+local AutoKiEnabled = false
+local AutoDBEnabled = false
 -- ============================================
 
 -- Get boss list
@@ -60,7 +63,6 @@ end
 
 -- ================= UI =================
 
--- Boss selector
 Tabs.Main:AddDropdown("BossSelectorDropdown", {
 	Title = "Select Boss",
 	Values = getBossList(),
@@ -71,7 +73,6 @@ Tabs.Main:AddDropdown("BossSelectorDropdown", {
 	end
 })
 
--- Autofarm toggle
 Tabs.Main:AddToggle("AutoFarmToggle", {
 	Title = "Auto Farm Boss",
 	Default = false,
@@ -84,7 +85,11 @@ Tabs.Misc:AddToggle("AutoKiToggle", {
 	Title = "AutoCharge KI",
 	Default = false,
 	Callback = function(state)
-		print("hello")
+		AutoKiEnabled = state
+		ReplicatedStorage.IncreaseEnergyEvent:FireServer(
+			workspace.stalou0406.IAKiCharge.IsCharging,
+			not state
+		)
 	end
 })
 
@@ -92,12 +97,12 @@ Tabs.Misc:AddToggle("AutoDBToggle", {
 	Title = "Auto Dragon Balls",
 	Default = false,
 	Callback = function(state)
-		print("hello")
+		AutoDBEnabled = state
 	end
 })
+
 -- ================= LOGIC =================
 
--- Get selected boss
 local function getBoss()
 	if not SelectedBossName then return end
 
@@ -113,7 +118,7 @@ local function getBoss()
 	return boss, hrp, humanoid
 end
 
--- Autofarm loop
+-- Autofarm boss loop
 task.spawn(function()
 	while true do
 		if AutoFarmEnabled then
@@ -122,16 +127,50 @@ task.spawn(function()
 
 			local boss, bossHrp, bossHumanoid = getBoss()
 
-			-- Only farm if boss is alive
 			if playerHrp and bossHrp and bossHumanoid and bossHumanoid.Health > 0 then
-				-- Teleport slightly behind boss
 				playerHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
-
-				-- Attack
 				combatRemote:FireServer()
 			end
 		end
-
 		task.wait(TELEPORT_DELAY)
+	end
+end)
+
+-- Auto Dragon Balls loop
+task.spawn(function()
+	local TOUCH_DELAY = 0.2
+
+	local dragonBallFolders = {
+		workspace:WaitForChild("DragonBalls"):WaitForChild("PorungaBalls"),
+		workspace:WaitForChild("DragonBalls"):WaitForChild("ShenronBalls")
+	}
+
+	local function fireTouch(touchInterest)
+		if touchInterest then
+			firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 0)
+			task.wait()
+			firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 1)
+		end
+	end
+
+	while true do
+		if AutoDBEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			for _, folder in ipairs(dragonBallFolders) do
+				for i = 1, 7 do
+					if not AutoDBEnabled then break end
+
+					local ball = folder:FindFirstChild(tostring(i))
+					if ball then
+						local corpo = ball:FindFirstChild("corpo")
+						local touchInterest = corpo and corpo:FindFirstChild("TouchInterest")
+						if touchInterest then
+							fireTouch(touchInterest)
+							task.wait(TOUCH_DELAY)
+						end
+					end
+				end
+			end
+		end
+		task.wait(0.5)
 	end
 end)

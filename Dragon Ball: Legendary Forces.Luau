@@ -39,11 +39,13 @@ local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.Activat
 -- ================= SETTINGS =================
 local TELEPORT_DELAY = 0.05
 local BACK_OFFSET = 3
+
 local AutoFarmEnabled = false
 local SelectedBossName = nil
 
 local AutoKiEnabled = false
 local AutoDBEnabled = false
+local AutoWhisEnabled = false
 -- ============================================
 
 -- Get boss list
@@ -81,11 +83,15 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 	end
 })
 
-Tabs.Main:AddToggle("AutoFarmToggle", {
-	Title = "AutoFarm",
+Tabs.Main:AddToggle("AutoFarmWhisToggle", {
+	Title = "AutoFarm Beerus",
 	Default = false,
 	Callback = function(state)
-		print("hello")
+		AutoWhisEnabled = state
+		AutoFarmEnabled = state
+		if state then
+			SelectedBossName = "Beerus"
+		end
 	end
 })
 
@@ -122,7 +128,7 @@ local function getBoss()
 	return boss, hrp, humanoid
 end
 
--- Autofarm boss loop
+-- Boss autofarm loop
 task.spawn(function()
 	while true do
 		if AutoFarmEnabled then
@@ -137,6 +143,16 @@ task.spawn(function()
 			end
 		end
 		task.wait(TELEPORT_DELAY)
+	end
+end)
+
+-- Auto Whis quest loop (every 5 seconds)
+task.spawn(function()
+	while true do
+		if AutoWhisEnabled then
+			ReplicatedStorage.Remotes.giveQuests:FireServer("Whis")
+		end
+		task.wait(5)
 	end
 end)
 
@@ -179,6 +195,7 @@ task.spawn(function()
 	end
 end)
 
+-- Auto KI loop
 task.spawn(function()
 	while true do
 		if AutoKiEnabled then

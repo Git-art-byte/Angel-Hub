@@ -96,6 +96,14 @@ Tabs.Main:AddToggle("AutoFarmWhisToggle", {
     end
 })
 
+Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
+    Title = "Auto Farm Gamemode",
+    Default = false,
+    Callback = function(state)
+        print("hi")
+    end
+})
+
 Tabs.Misc:AddToggle("AutoKiToggle", {
     Title = "AutoCharge KI",
     Default = false,

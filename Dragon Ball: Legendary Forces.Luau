@@ -32,6 +32,7 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 -- Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.ActivateCombat
@@ -39,6 +40,7 @@ local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.Activat
 -- ================= SETTINGS =================
 local TELEPORT_DELAY = 0.05
 local BACK_OFFSET = 3
+local SCAN_DELAY = 2 -- Delay between scanning for new targets
 
 local AutoFarmEnabled = false
 local SelectedBossName = nil
@@ -46,7 +48,8 @@ local SelectedBossName = nil
 local AutoKiEnabled = false
 local AutoDBEnabled = false
 local AutoWhisEnabled = false
-local AutoUIEnabled = false -- New toggle
+local AutoUIEnabled = false
+local AutoFarmGamemodeEnabled = false -- New toggle
 -- ============================================
 
 -- Get boss list
@@ -62,6 +65,32 @@ local function getBossList()
     end
 
     return list
+end
+
+-- Get all valid targets in workspace (models with HumanoidRootPart)
+local function getWorkspaceTargets()
+    local targets = {}
+    
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        -- Check if it's a model with HumanoidRootPart and has health
+        if obj:IsA("Model") then
+            local hrp = obj:FindFirstChild("HumanoidRootPart")
+            local humanoid = obj:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and humanoid and humanoid.Health > 0 then
+                -- Make sure it's not the player
+                if obj ~= player.Character then
+                    table.insert(targets, {
+                        model = obj,
+                        hrp = hrp,
+                        humanoid = humanoid
+                    })
+                end
+            end
+        end
+    end
+    
+    return targets
 end
 
 -- ================= UI =================
@@ -81,6 +110,9 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     Default = false,
     Callback = function(state)
         AutoFarmEnabled = state
+        if state then
+            AutoFarmGamemodeEnabled = false
+        end
     end
 })
 
@@ -91,6 +123,7 @@ Tabs.Main:AddToggle("AutoFarmWhisToggle", {
         AutoWhisEnabled = state
         AutoFarmEnabled = state
         if state then
+            AutoFarmGamemodeEnabled = false
             SelectedBossName = "Beerus"
         end
     end
@@ -100,7 +133,12 @@ Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
     Title = "Auto Farm Gamemode",
     Default = false,
     Callback = function(state)
-        print("hi")
+        AutoFarmGamemodeEnabled = state
+        if state then
+            -- Disable other farm modes to prevent conflicts
+            AutoFarmEnabled = false
+            AutoWhisEnabled = false
+        end
     end
 })
 
@@ -157,6 +195,53 @@ task.spawn(function()
             if playerHrp and bossHrp and bossHumanoid and bossHumanoid.Health > 0 then
                 playerHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
                 combatRemote:FireServer()
+            end
+        end
+        task.wait(TELEPORT_DELAY)
+    end
+end)
+
+-- Auto Farm Gamemode loop
+task.spawn(function()
+    local currentTarget = nil
+    local lastScanTime = 0
+    
+    while true do
+        if AutoFarmGamemodeEnabled then
+            local character = player.Character
+            local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if playerHrp then
+                -- Scan for new targets every SCAN_DELAY seconds
+                if tick() - lastScanTime > SCAN_DELAY then
+                    local targets = getWorkspaceTargets()
+                    
+                    -- Find the closest target
+                    local closestDistance = math.huge
+                    local closestTarget = nil
+                    
+                    for _, target in ipairs(targets) do
+                        if target.hrp and target.humanoid and target.humanoid.Health > 0 then
+                            local distance = (playerHrp.Position - target.hrp.Position).Magnitude
+                            if distance < closestDistance then
+                                closestDistance = distance
+                                closestTarget = target
+                            end
+                        end
+                    end
+                    
+                    currentTarget = closestTarget
+                    lastScanTime = tick()
+                end
+                
+                -- Attack current target if valid
+                if currentTarget and currentTarget.hrp and currentTarget.humanoid and currentTarget.humanoid.Health > 0 then
+                    playerHrp.CFrame = currentTarget.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
+                    combatRemote:FireServer()
+                else
+                    -- Target is dead or invalid, force a rescan
+                    lastScanTime = 0
+                end
             end
         end
         task.wait(TELEPORT_DELAY)

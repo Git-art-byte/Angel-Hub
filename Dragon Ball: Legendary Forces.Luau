@@ -57,6 +57,7 @@ local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
 local AutoLowLevelEnabled = false
+local AutoTOPBossEnabled = false
 
 -- Variable to store dropdown references
 local BossDropdown = nil
@@ -99,6 +100,34 @@ local function getNearbyBosses()
     end
 
     return list
+end
+
+-- Get TOP bosses
+local function getTOPBosses()
+    local targets = {}
+    local topBossesFolder = workspace:FindFirstChild("TOPBosses")
+    if not topBossesFolder then return targets end
+    
+    local character = player.Character
+    local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not playerHrp then return targets end
+    
+    for _, boss in ipairs(topBossesFolder:GetChildren()) do
+        if boss:IsA("Model") then
+            local hrp = boss:FindFirstChild("HumanoidRootPart")
+            local humanoid = boss:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and humanoid and humanoid.Health > 0 then
+                table.insert(targets, {
+                    model = boss,
+                    hrp = hrp,
+                    humanoid = humanoid
+                })
+            end
+        end
+    end
+    
+    return targets
 end
 
 -- Get all valid targets in workspace (models with HumanoidRootPart)
@@ -170,6 +199,32 @@ local function collectDragonBalls()
             Content = "Character not found!",
             Duration = 3
         })
+    end
+end
+
+-- Get TOP timer text safely
+local function getTOPTimerText()
+    local success, result = pcall(function()
+        local topSystem = workspace:FindFirstChild("TopSystem")
+        if topSystem then
+            local slane = topSystem:FindFirstChild("slane")
+            if slane then
+                local billboard = slane:FindFirstChild("BillboardGui")
+                if billboard then
+                    local textLabel = billboard:FindFirstChild("TextLabel")
+                    if textLabel then
+                        return textLabel.Text
+                    end
+                end
+            end
+        end
+        return "TOP Timer not available"
+    end)
+    
+    if success then
+        return result
+    else
+        return "Error loading TOP timer"
     end
 end
 
@@ -379,6 +434,7 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
             AutoFarmGamemodeEnabled = false
             AutoWhisEnabled = false
             AutoLowLevelEnabled = false
+            AutoTOPBossEnabled = false
         end
     end
 })
@@ -394,6 +450,7 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
             AutoFarmEnabled = false
             AutoFarmGamemodeEnabled = false
             AutoLowLevelEnabled = false
+            AutoTOPBossEnabled = false
             SelectedBossName = "Beerus"
         end
     end
@@ -410,6 +467,7 @@ Tabs.Zeni:AddToggle("AutoFarmBlackGoku", {
             AutoFarmEnabled = false
             AutoWhisEnabled = false
             AutoFarmGamemodeEnabled = false
+            AutoTOPBossEnabled = false
             SelectedBossName = "GokuBlack"
         end
     end
@@ -426,6 +484,7 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
             AutoFarmEnabled = false
             AutoWhisEnabled = false
             AutoLowLevelEnabled = false
+            AutoTOPBossEnabled = false
         end
     end
 })
@@ -476,18 +535,27 @@ Tabs.MUI:AddToggle("AutoUIToggle", {
     end
 })
 
+-- TOP Section
 local Section6 = Tabs.TOP:AddSection("Tournament of Power")
 
-Tabs.TOP:AddParagraph({
+-- Create a variable to store the paragraph for updating
+local TOPParagraph = Tabs.TOP:AddParagraph({
     Title = "Next TOP",
-    Content = workspace.TopSystem.slane.BillboardGui.TextLabel
+    Content = getTOPTimerText()
 })
 
 Tabs.TOP:AddToggle("AutoTOPBossToggle", {
-    Title = "AutoFarm TOP",
+    Title = "AutoFarm TOP Bosses",
     Default = false,
     Callback = function(state)
-        print("hi")
+        AutoTOPBossEnabled = state
+        if state then
+            AutoFarmEnabled = false
+            AutoWhisEnabled = false
+            AutoLowLevelEnabled = false
+            AutoFarmGamemodeEnabled = false
+        end
+        print("AutoTOP Boss toggled:", state)
     end
 })
 -- ================= LOGIC =================
@@ -572,6 +640,41 @@ task.spawn(function()
     end
 end)
 
+-- Auto TOP Bosses loop
+task.spawn(function()
+    while true do
+        if AutoTOPBossEnabled then
+            local character = player.Character
+            local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if playerHrp then
+                local topBosses = getTOPBosses()
+                
+                -- Find the closest TOP boss
+                local closestDistance = math.huge
+                local closestBoss = nil
+                
+                for _, boss in ipairs(topBosses) do
+                    if boss.hrp and boss.humanoid and boss.humanoid.Health > 0 then
+                        local distance = (playerHrp.Position - boss.hrp.Position).Magnitude
+                        if distance < closestDistance then
+                            closestDistance = distance
+                            closestBoss = boss
+                        end
+                    end
+                end
+                
+                -- Attack closest TOP boss if found
+                if closestBoss and closestBoss.hrp then
+                    playerHrp.CFrame = closestBoss.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
+                    combatRemote:FireServer()
+                end
+            end
+        end
+        task.wait(TELEPORT_DELAY)
+    end
+end)
+
 -- Auto Whis quest loop (every 5 seconds)
 task.spawn(function()
     while true do
@@ -610,13 +713,25 @@ task.spawn(function()
     end
 end)
 
--- Update player dropdown values constantly (every 0.005 seconds as requested)
+-- Update player dropdown values constantly
 task.spawn(function()
     while true do
         if PlayerDropdown then
             local players = getAllPlayers()
             PlayerDropdown:SetValues(players)
         end
-        task.wait(0.05) -- Updated to 0.005 seconds as requested
+        task.wait(0.05)
+    end
+end)
+
+-- Update TOP timer paragraph constantly
+task.spawn(function()
+    while true do
+        if TOPParagraph then
+            local success, result = pcall(function()
+                TOPParagraph:SetContent(getTOPTimerText())
+            end)
+        end
+        task.wait(0.00005) -- Update every second
     end
 end)

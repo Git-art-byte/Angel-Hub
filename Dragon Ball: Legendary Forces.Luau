@@ -142,6 +142,14 @@ Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
     end
 })
 
+Tabs.Main:AddToggle("AutoSaibamanToggle", {
+    Title = "Auto Saibaman",
+    Default = false,
+    Callback = function(state)
+        print("hi")
+    end
+})
+
 Tabs.Misc:AddToggle("AutoKiToggle", {
     Title = "AutoCharge KI",
     Default = false,

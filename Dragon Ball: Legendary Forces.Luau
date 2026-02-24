@@ -475,21 +475,6 @@ Tabs.MUI:AddToggle("AutoUIToggle", {
         AutoUIEnabled = state
     end
 })
-
-local Section6 = Tabs.TOP:AddSection("Tournament of Power")
-
-Tabs.TOP:AddParagraph({
-    Title = "Next TOP",
-    Content = workspace.TopSystem.slane.BillboardGui.TextLabel
-})
-
-Tabs.TOP:AddToggle("AutoTOPBossToggle", {
-    Title = "AutoFarm TOP",
-    Default = false,
-    Callback = function(state)
-        print("hi")
-    end
-})
 -- ================= LOGIC =================
 
 local function getBoss()
@@ -612,4 +597,11 @@ end)
 
 -- Update player dropdown values constantly (every 0.005 seconds as requested)
 task.spawn(function()
-    while t
+    while true do
+        if PlayerDropdown then
+            local players = getAllPlayers()
+            PlayerDropdown:SetValues(players)
+        end
+        task.wait(0.05) -- Updated to 0.005 seconds as requested
+    end
+end)

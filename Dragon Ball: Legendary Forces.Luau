@@ -54,6 +54,9 @@ local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
 local AutoLowLevelEnabled = false
+
+-- Variable to store dropdown reference
+local BossDropdown = nil
 -- ============================================
 
 -- Get nearby bosses (within 500 studs)
@@ -80,34 +83,6 @@ local function getNearbyBosses()
     end
 
     return list
-end
-
--- Update dropdown values constantly (every 0.05 seconds)
-local function updateBossDropdown()
-    while true do
-        if Fluent and Fluent:GetDropdown("BossSelectorDropdown") then
-            local nearbyBosses = getNearbyBosses()
-            local currentValues = Fluent:GetDropdown("BossSelectorDropdown").Values or {}
-            
-            -- Only update if the list has changed
-            local needsUpdate = false
-            if #nearbyBosses ~= #currentValues then
-                needsUpdate = true
-            else
-                for i, bossName in ipairs(nearbyBosses) do
-                    if bossName ~= currentValues[i] then
-                        needsUpdate = true
-                        break
-                    end
-                end
-            end
-            
-            if needsUpdate then
-                Fluent:GetDropdown("BossSelectorDropdown"):SetValues(nearbyBosses)
-            end
-        end
-        task.wait(0.05) -- Update every 0.05 seconds (20 times per second)
-    end
 end
 
 -- Get all valid targets in workspace (models with HumanoidRootPart)
@@ -185,9 +160,10 @@ end
 -- ================= UI =================
 local Section1 = Tabs.Main:AddSection("Boss Farming")
 
-Tabs.Main:AddDropdown("BossSelectorDropdown", {
+-- Create dropdown and store reference
+BossDropdown = Tabs.Main:AddDropdown("BossSelectorDropdown", {
     Title = "Select Boss",
-    Values = getNearbyBosses(), -- Show nearby bosses initially
+    Values = getNearbyBosses(),
     Multi = false,
     Default = nil,
     Callback = function(value)
@@ -381,5 +357,15 @@ task.spawn(function()
     end
 end)
 
--- Start updating the boss dropdown
-task.spawn(updateBossDropdown)
+-- Update dropdown values constantly using the stored reference
+task.spawn(function()
+    while true do
+        if BossDropdown then
+            local nearbyBosses = getNearbyBosses()
+            
+            -- Simple direct update every 0.05 seconds
+            BossDropdown:SetValues(nearbyBosses)
+        end
+        task.wait(0.05)
+    end
+end)

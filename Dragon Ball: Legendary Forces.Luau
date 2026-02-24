@@ -732,6 +732,6 @@ task.spawn(function()
                 TOPParagraph:SetContent(getTOPTimerText())
             end)
         end
-        task.wait(0.00005) -- Update every second
+        task.wait(1) -- Update every second
     end
 end)

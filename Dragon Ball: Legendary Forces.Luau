@@ -207,9 +207,9 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
     end
 })
 
-local Section2_5 = Tabs.Main:AddSection("Low Level")
+local Section2_5 = Tabs.Zeni:AddSection("Low Level")
 
-Tabs.Main:AddToggle("AutoFarmBlackGoku", {
+Tabs.Zeni:AddToggle("AutoFarmBlackGoku", {
     Title = "AutoFarm Money",
     Default = false,
     Callback = function(state)

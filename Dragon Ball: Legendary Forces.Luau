@@ -50,19 +50,9 @@ local SCAN_DELAY = 2 -- Delay between scanning for new targets
 local AutoFarmEnabled = false
 local SelectedBossName = nil
 
-local AutoKiEnabled = false
-local AutoDBEnabled = false
 local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
-local AutoSaibamanEnabled = false
-
--- Saibaman specific variables
-local RADITZ_KILLS_NEEDED = 8
-local NAPPA_KILLS_NEEDED = 10
-local raditzKills = 0
-local nappaKills = 0
-local questActive = false
 -- ============================================
 
 -- Get boss list
@@ -106,43 +96,50 @@ local function getWorkspaceTargets()
     return targets
 end
 
--- Get Saibaman targets (Raditz and Nappa)
-local function getSaibamanTargets()
-    local targets = {}
-    local bossesFolder = workspace:FindFirstChild("Bosses")
-    if not bossesFolder then return targets end
-    
-    -- Find Raditz
-    local raditz = bossesFolder:FindFirstChild("Raditz")
-    if raditz then
-        local hrp = raditz:FindFirstChild("HumanoidRootPart")
-        local humanoid = raditz:FindFirstChildOfClass("Humanoid")
-        if hrp and humanoid and humanoid.Health > 0 then
-            table.insert(targets, {
-                model = raditz,
-                hrp = hrp,
-                humanoid = humanoid,
-                name = "Raditz"
-            })
+-- Dragon Ball collection function
+local function collectDragonBalls()
+    local TOUCH_DELAY = 0.2
+
+    local dragonBallFolders = {
+        workspace:WaitForChild("DragonBalls"):WaitForChild("PorungaBalls"),
+        workspace:WaitForChild("DragonBalls"):WaitForChild("ShenronBalls")
+    }
+
+    local function fireTouch(touchInterest)
+        if touchInterest then
+            firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 0)
+            task.wait()
+            firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 1)
         end
     end
-    
-    -- Find Nappa
-    local nappa = bossesFolder:FindFirstChild("Nappa")
-    if nappa then
-        local hrp = nappa:FindFirstChild("HumanoidRootPart")
-        local humanoid = nappa:FindFirstChildOfClass("Humanoid")
-        if hrp and humanoid and humanoid.Health > 0 then
-            table.insert(targets, {
-                model = nappa,
-                hrp = hrp,
-                humanoid = humanoid,
-                name = "Nappa"
-            })
+
+    -- Collect balls once
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        for _, folder in ipairs(dragonBallFolders) do
+            for i = 1, 7 do
+                local ball = folder:FindFirstChild(tostring(i))
+                if ball then
+                    local corpo = ball:FindFirstChild("corpo")
+                    local touchInterest = corpo and corpo:FindFirstChild("TouchInterest")
+                    if touchInterest then
+                        fireTouch(touchInterest)
+                        task.wait(TOUCH_DELAY)
+                    end
+                end
+            end
         end
+        Fluent:Notify({
+            Title = "Dragon Balls",
+            Content = "Finished collecting Dragon Balls!",
+            Duration = 3
+        })
+    else
+        Fluent:Notify({
+            Title = "Error",
+            Content = "Character not found!",
+            Duration = 3
+        })
     end
-    
-    return targets
 end
 
 -- ================= UI =================
@@ -166,7 +163,6 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
         if state then
             AutoFarmGamemodeEnabled = false
             AutoWhisEnabled = false
-            AutoSaibamanEnabled = false
         end
     end
 })
@@ -181,7 +177,6 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
         if state then
             AutoFarmEnabled = state
             AutoFarmGamemodeEnabled = false
-            AutoSaibamanEnabled = false
             SelectedBossName = "Beerus"
         end
     end
@@ -189,7 +184,7 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
 
 local Section3 = Tabs.Gamemode:AddSection("Gamemode/Wave")
 
-Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
+Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
     Title = "Auto Farm Gamemode",
     Default = false,
     Callback = function(state)
@@ -197,67 +192,15 @@ Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
         if state then
             AutoFarmEnabled = false
             AutoWhisEnabled = false
-            AutoSaibamanEnabled = false
         end
-    end
-})
-
--- Saibaman Toggle with Progress (using a Paragraph that we'll update by recreating it)
-local SaibamanProgress = Tabs.Main:AddParagraph({
-    Title = "Saibaman Progress",
-    Content = "Raditz: 0/8 | Nappa: 0/10 | Quest: Inactive"
-})
-
--- Function to update progress
-local function updateSaibamanProgress()
-    local questStatus = questActive and "Active" or "Inactive"
-    SaibamanProgress.Content = ("Raditz: %d/%d | Nappa: %d/%d | Quest: %s"):format(
-        raditzKills, RADITZ_KILLS_NEEDED,
-        nappaKills, NAPPA_KILLS_NEEDED,
-        questStatus
-    )
-end
-
-Tabs.Main:AddToggle("AutoSaibamanToggle", {
-    Title = "Auto Saibaman",
-    Default = false,
-    Callback = function(state)
-        AutoSaibamanEnabled = state
-        if state then
-            -- Disable other farm modes
-            AutoFarmEnabled = false
-            AutoWhisEnabled = false
-            AutoFarmGamemodeEnabled = false
-            -- Reset counters
-            raditzKills = 0
-            nappaKills = 0
-            questActive = false
-            updateSaibamanProgress()
-            
-            -- Start quest immediately
-            ReplicatedStorage.Remotes.giveQuests:FireServer("SaibamanQuest")
-            questActive = true
-            updateSaibamanProgress()
-        end
-    end
-})
-
-Tabs.Misc:AddToggle("AutoKiToggle", {
-    Title = "AutoCharge KI",
-    Default = false,
-    Callback = function(state)
-        AutoKiEnabled = state
     end
 })
 
 local Section4 = Tabs.DragonBall:AddSection("Dragon Balls")
 
-Tabs.DragonBall:AddToggle("AutoDBToggle", {
-    Title = "Get Dragon Balls",
-    Default = false,
-    Callback = function(state)
-        AutoDBEnabled = state
-    end
+Tabs.DragonBall:AddButton({
+    Title = "Collect Dragon Balls",
+    Callback = collectDragonBalls
 })
 
 local Section5 = Tabs.MUI:AddSection("UI")
@@ -359,159 +302,6 @@ task.spawn(function()
             ReplicatedStorage.Remotes.giveQuests:FireServer("Whis")
         end
         task.wait(5)
-    end
-end)
-
--- Auto Saibaman loop
-task.spawn(function()
-    local currentTarget = nil
-    local lastQuestTime = 0
-    local QUEST_COOLDOWN = 3 -- Cooldown between quest requests
-    local lastHealth = {}
-    
-    while true do
-        if AutoSaibamanEnabled then
-            local character = player.Character
-            local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
-            
-            if playerHrp then
-                -- Get current targets
-                local targets = getSaibamanTargets()
-                
-                -- Check if we need to restart quest (all kills done)
-                if (raditzKills >= RADITZ_KILLS_NEEDED and nappaKills >= NAPPA_KILLS_NEEDED) then
-                    if tick() - lastQuestTime > QUEST_COOLDOWN then
-                        -- Fire the quest remote to restart
-                        ReplicatedStorage.Remotes.giveQuests:FireServer("SaibamanQuest")
-                        lastQuestTime = tick()
-                        
-                        -- Reset kill counters
-                        raditzKills = 0
-                        nappaKills = 0
-                        questActive = true
-                        updateSaibamanProgress()
-                        
-                        -- Wait a bit after starting new quest
-                        task.wait(2)
-                    end
-                end
-                
-                -- Monitor health to detect kills
-                for _, target in ipairs(targets) do
-                    local healthKey = target.name .. "_health"
-                    
-                    if not lastHealth[healthKey] then
-                        lastHealth[healthKey] = target.humanoid.Health
-                    end
-                    
-                    -- Check if health dropped to 0 (boss died)
-                    if lastHealth[healthKey] > 0 and target.humanoid.Health <= 0 then
-                        if target.name == "Raditz" and raditzKills < RADITZ_KILLS_NEEDED then
-                            raditzKills = raditzKills + 1
-                            print("Killed Raditz: " .. raditzKills .. "/" .. RADITZ_KILLS_NEEDED)
-                            updateSaibamanProgress()
-                        elseif target.name == "Nappa" and nappaKills < NAPPA_KILLS_NEEDED then
-                            nappaKills = nappaKills + 1
-                            print("Killed Nappa: " .. nappaKills .. "/" .. NAPPA_KILLS_NEEDED)
-                            updateSaibamanProgress()
-                        end
-                        
-                        -- Wait for boss to respawn
-                        task.wait(2)
-                    end
-                    
-                    lastHealth[healthKey] = target.humanoid.Health
-                end
-                
-                -- Determine which boss to attack
-                if raditzKills < RADITZ_KILLS_NEEDED then
-                    -- Find Raditz
-                    currentTarget = nil
-                    for _, target in ipairs(targets) do
-                        if target.name == "Raditz" then
-                            currentTarget = target
-                            break
-                        end
-                    end
-                elseif nappaKills < NAPPA_KILLS_NEEDED then
-                    -- Find Nappa
-                    currentTarget = nil
-                    for _, target in ipairs(targets) do
-                        if target.name == "Nappa" then
-                            currentTarget = target
-                            break
-                        end
-                    end
-                end
-                
-                -- Attack current target
-                if currentTarget and currentTarget.hrp and currentTarget.humanoid and currentTarget.humanoid.Health > 0 then
-                    -- Teleport behind the boss
-                    playerHrp.CFrame = currentTarget.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
-                    
-                    -- Fire combat remote
-                    combatRemote:FireServer()
-                end
-            end
-        end
-        task.wait(TELEPORT_DELAY)
-    end
-end)
-
--- Auto Dragon Balls loop
-task.spawn(function()
-    local TOUCH_DELAY = 0.2
-
-    local dragonBallFolders = {
-        workspace:WaitForChild("DragonBalls"):WaitForChild("PorungaBalls"),
-        workspace:WaitForChild("DragonBalls"):WaitForChild("ShenronBalls")
-    }
-
-    local function fireTouch(touchInterest)
-        if touchInterest then
-            firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 0)
-            task.wait()
-            firetouchinterest(player.Character.HumanoidRootPart, touchInterest.Parent, 1)
-        end
-    end
-
-    while true do
-        if AutoDBEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            for _, folder in ipairs(dragonBallFolders) do
-                for i = 1, 7 do
-                    if not AutoDBEnabled then break end
-
-                    local ball = folder:FindFirstChild(tostring(i))
-                    if ball then
-                        local corpo = ball:FindFirstChild("corpo")
-                        local touchInterest = corpo and corpo:FindFirstChild("TouchInterest")
-                        if touchInterest then
-                            fireTouch(touchInterest)
-                            task.wait(TOUCH_DELAY)
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.5)
-    end
-end)
-
--- Auto KI loop
-task.spawn(function()
-    while true do
-        if AutoKiEnabled then
-            ReplicatedStorage.IncreaseEnergyEvent:FireServer(
-                workspace.stalou0406.IAKiCharge.IsCharging,
-                false
-            )
-        else
-            ReplicatedStorage.IncreaseEnergyEvent:FireServer(
-                workspace.stalou0406.IAKiCharge.IsCharging,
-                true
-            )
-        end
-        task.wait(0.3)
     end
 end)
 

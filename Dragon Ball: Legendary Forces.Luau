@@ -71,8 +71,8 @@ local function getNearbyBosses()
             local hrp = boss:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local distance = (playerHrp.Position - hrp.Position).Magnitude
-                -- Only show bosses within 3000 studs
-                if distance <= 3000 then
+                -- Only show bosses within 500 studs
+                if distance <= 500 then
                     table.insert(list, boss.Name)
                 end
             end
@@ -82,14 +82,31 @@ local function getNearbyBosses()
     return list
 end
 
--- Update dropdown values periodically
+-- Update dropdown values constantly (every 0.05 seconds)
 local function updateBossDropdown()
     while true do
         if Fluent and Fluent:GetDropdown("BossSelectorDropdown") then
             local nearbyBosses = getNearbyBosses()
-            Fluent:GetDropdown("BossSelectorDropdown"):SetValues(nearbyBosses)
+            local currentValues = Fluent:GetDropdown("BossSelectorDropdown").Values or {}
+            
+            -- Only update if the list has changed
+            local needsUpdate = false
+            if #nearbyBosses ~= #currentValues then
+                needsUpdate = true
+            else
+                for i, bossName in ipairs(nearbyBosses) do
+                    if bossName ~= currentValues[i] then
+                        needsUpdate = true
+                        break
+                    end
+                end
+            end
+            
+            if needsUpdate then
+                Fluent:GetDropdown("BossSelectorDropdown"):SetValues(nearbyBosses)
+            end
         end
-        task.wait(0.05) -- Update every 0.05 seconds
+        task.wait(0.05) -- Update every 0.05 seconds (20 times per second)
     end
 end
 

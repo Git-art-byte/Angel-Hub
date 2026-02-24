@@ -182,6 +182,16 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
     end
 })
 
+local Section2.5 = Tabs.Main:AddSection("Low Level")
+
+Tabs.Main:AddToggle("AutoFarmBlackGoku", {
+    Title = "AutoFarm Money",
+    Default = false,
+    Callback = function(state)
+        print("hi")
+    end
+})
+
 local Section3 = Tabs.Gamemode:AddSection("Gamemode/Wave")
 
 Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {

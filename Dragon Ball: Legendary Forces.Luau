@@ -53,21 +53,44 @@ local SelectedBossName = nil
 local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
+local AutoLowLevelEnabled = false
 -- ============================================
 
--- Get boss list
-local function getBossList()
+-- Get nearby bosses (within 500 studs)
+local function getNearbyBosses()
     local list = {}
     local bossesFolder = workspace:FindFirstChild("Bosses")
     if not bossesFolder then return list end
+    
+    local character = player.Character
+    local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not playerHrp then return list end
 
     for _, boss in ipairs(bossesFolder:GetChildren()) do
         if boss:IsA("Model") then
-            table.insert(list, boss.Name)
+            local hrp = boss:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local distance = (playerHrp.Position - hrp.Position).Magnitude
+                -- Only show bosses within 500 studs
+                if distance <= 500 then
+                    table.insert(list, boss.Name)
+                end
+            end
         end
     end
 
     return list
+end
+
+-- Update dropdown values periodically
+local function updateBossDropdown()
+    while true do
+        if Fluent and Fluent:GetDropdown("BossSelectorDropdown") then
+            local nearbyBosses = getNearbyBosses()
+            Fluent:GetDropdown("BossSelectorDropdown"):SetValues(nearbyBosses)
+        end
+        task.wait(5) -- Update every 5 seconds
+    end
 end
 
 -- Get all valid targets in workspace (models with HumanoidRootPart)
@@ -147,7 +170,7 @@ local Section1 = Tabs.Main:AddSection("Boss Farming")
 
 Tabs.Main:AddDropdown("BossSelectorDropdown", {
     Title = "Select Boss",
-    Values = getBossList(),
+    Values = getNearbyBosses(), -- Show nearby bosses initially
     Multi = false,
     Default = nil,
     Callback = function(value)
@@ -156,13 +179,14 @@ Tabs.Main:AddDropdown("BossSelectorDropdown", {
 })
 
 Tabs.Main:AddToggle("AutoFarmToggle", {
-    Title = "Auto Farm Boss",
+    Title = "AutoFarm Boss",
     Default = false,
     Callback = function(state)
         AutoFarmEnabled = state
         if state then
             AutoFarmGamemodeEnabled = false
             AutoWhisEnabled = false
+            AutoLowLevelEnabled = false
         end
     end
 })
@@ -177,22 +201,29 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
         if state then
             AutoFarmEnabled = state
             AutoFarmGamemodeEnabled = false
+            AutoLowLevelEnabled = false
             SelectedBossName = "Beerus"
         end
     end
 })
 
-local Section2.5 = Tabs.Main:AddSection("Low Level")
+local Section2_5 = Tabs.Main:AddSection("Low Level")
 
 Tabs.Main:AddToggle("AutoFarmBlackGoku", {
     Title = "AutoFarm Money",
     Default = false,
     Callback = function(state)
-        print("hi")
+        AutoLowLevelEnabled = state
+        if state then
+            AutoFarmEnabled = false
+            AutoWhisEnabled = false
+            AutoFarmGamemodeEnabled = false
+            SelectedBossName = "GokuBlack"
+        end
     end
 })
 
-local Section3 = Tabs.Gamemode:AddSection("Gamemode/Wave")
+local Section3 = Tabs.Gamemode:AddSection("Gamemode")
 
 Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
     Title = "Auto Farm Gamemode",
@@ -202,6 +233,7 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
         if state then
             AutoFarmEnabled = false
             AutoWhisEnabled = false
+            AutoLowLevelEnabled = false
         end
     end
 })
@@ -243,7 +275,7 @@ end
 -- Boss autofarm loop
 task.spawn(function()
     while true do
-        if AutoFarmEnabled then
+        if AutoFarmEnabled or AutoLowLevelEnabled then
             local character = player.Character
             local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
 
@@ -331,3 +363,6 @@ task.spawn(function()
         task.wait(TP_DELAY)
     end
 end)
+
+-- Start updating the boss dropdown
+task.spawn(updateBossDropdown)

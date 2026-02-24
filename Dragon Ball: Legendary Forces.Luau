@@ -231,6 +231,22 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
     end
 })
 
+local Section33 = Tabs.Troll:AddSection("Troll")
+
+local DropdownTroll = Tabs.Troll:AddDropdown("TrollDropdown", {
+    Title = "Select Player",
+    Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
+    Multi = false,
+    Default = 1,
+})
+
+Tabs.Troll:AddButton({
+    Title = "Fling",
+    Callback = function()
+        print("Hello, world!")
+    end
+})
+
 local Section4 = Tabs.DragonBall:AddSection("Dragon Balls")
 
 Tabs.DragonBall:AddButton({

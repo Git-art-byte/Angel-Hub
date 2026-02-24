@@ -231,7 +231,7 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
     end
 })
 
-local Section33 = Tabs.Troll:AddSection("Troll")
+local Section3_5 = Tabs.Troll:AddSection("Troll")
 
 local DropdownTroll = Tabs.Troll:AddDropdown("TrollDropdown", {
     Title = "Select Player",

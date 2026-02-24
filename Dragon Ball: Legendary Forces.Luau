@@ -18,7 +18,7 @@ Fluent:Notify({
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Zeni = Window:AddTab({ Title = "Zeni", Icon = "dollar-sign" }),
-    Gamemode = Window:AddTab({ Title = "Waves/Gamemode", Icon = "waves" }),
+    Gamemode = Window:AddTab({ Title = "Gamemode", Icon = "waves" }),
     Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "swords" }),
     DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "" }),
     MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "" }),
@@ -240,10 +240,10 @@ Tabs.Zeni:AddToggle("AutoFarmBlackGoku", {
     end
 })
 
-local Section3 = Tabs.Gamemode:AddSection("Gamemode")
+local Section3 = Tabs.Gamemode:AddSection("Waves")
 
 Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
-    Title = "Auto Farm Gamemode",
+    Title = "AutoFarm Waves",
     Default = false,
     Callback = function(state)
         AutoFarmGamemodeEnabled = state
@@ -258,7 +258,7 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
 local Section4 = Tabs.DragonBall:AddSection("Dragon Balls")
 
 Tabs.DragonBall:AddButton({
-    Title = "Collect Dragon Balls",
+    Title = "Get Dragon Balls",
     Callback = collectDragonBalls
 })
 

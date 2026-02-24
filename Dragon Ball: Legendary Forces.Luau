@@ -17,9 +17,11 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Zeni = Window:AddTab({ Title = "Zeni", Icon = "user" }),
-    Gamemode = Window:AddTab({ Title = "Waves/Gamemode", Icon = "user" }),
-    Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "user" }),
+    Zeni = Window:AddTab({ Title = "Zeni", Icon = "dollar-sign" }),
+    Gamemode = Window:AddTab({ Title = "Waves/Gamemode", Icon = "waves" }),
+    Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "swords" }),
+    DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "" }),
+    MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
@@ -144,6 +146,7 @@ local function getSaibamanTargets()
 end
 
 -- ================= UI =================
+local Section1 = Tabs.Main:AddSection("Boss Farming")
 
 Tabs.Main:AddDropdown("BossSelectorDropdown", {
     Title = "Select Boss",
@@ -168,8 +171,10 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
-Tabs.Main:AddToggle("AutoFarmWhisToggle", {
-    Title = "AutoFarm Beerus",
+local Section2 = Tabs.Zeni:AddSection("High Level")
+
+Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
+    Title = "AutoFarm Money",
     Default = false,
     Callback = function(state)
         AutoWhisEnabled = state
@@ -181,6 +186,8 @@ Tabs.Main:AddToggle("AutoFarmWhisToggle", {
         end
     end
 })
+
+local Section3 = Tabs.Gamemode:AddSection("Gamemode/Wave")
 
 Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
     Title = "Auto Farm Gamemode",
@@ -243,16 +250,20 @@ Tabs.Misc:AddToggle("AutoKiToggle", {
     end
 })
 
-Tabs.Misc:AddToggle("AutoDBToggle", {
-    Title = "Auto Dragon Balls",
+local Section4 = Tabs.DragonBall:AddSection("Dragon Balls")
+
+Tabs.DragonBall:AddToggle("AutoDBToggle", {
+    Title = "Get Dragon Balls",
     Default = false,
     Callback = function(state)
         AutoDBEnabled = state
     end
 })
 
-Tabs.Misc:AddToggle("AutoUIToggle", {
-    Title = "Auto UI",
+local Section5 = Tabs.MUI:AddSection("UI")
+
+Tabs.MUI:AddToggle("AutoUIToggle", {
+    Title = "Auto MUI Chamber",
     Default = false,
     Callback = function(state)
         AutoUIEnabled = state

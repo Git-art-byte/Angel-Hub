@@ -17,6 +17,9 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Zeni = Window:AddTab({ Title = "Zeni", Icon = "user" }),
+    Gamemode = Window:AddTab({ Title = "Waves/Gamemode", Icon = "user" }),
+    Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "user" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }

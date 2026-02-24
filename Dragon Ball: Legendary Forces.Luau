@@ -38,6 +38,8 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
 local player = Players.LocalPlayer
 local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.ActivateCombat
@@ -55,9 +57,22 @@ local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
 local AutoLowLevelEnabled = false
 
--- Variable to store dropdown reference
+-- Variable to store dropdown references
 local BossDropdown = nil
+local PlayerDropdown = nil
+local SelectedPlayer = nil
 -- ============================================
+
+-- Get all players in the server (updates constantly)
+local function getAllPlayers()
+    local playerList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            table.insert(playerList, plr.Name)
+        end
+    end
+    return playerList
+end
 
 -- Get nearby bosses (within 500 studs)
 local function getNearbyBosses()
@@ -157,6 +172,189 @@ local function collectDragonBalls()
     end
 end
 
+-- ================= FLING SYSTEM =================
+local SkidFling = function(TargetPlayer)
+    if typeof(TargetPlayer) == "string" then
+        TargetPlayer = Players:FindFirstChild(TargetPlayer)
+    end
+    
+    if not TargetPlayer or not TargetPlayer.Character then 
+        Fluent:Notify({
+            Title = "Error",
+            Content = "Player not found or invalid!",
+            Duration = 3
+        })
+        return 
+    end
+
+    local Character = player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local RootPart = Humanoid and Humanoid.RootPart
+
+    local TCharacter = TargetPlayer.Character
+    local THumanoid
+    local TRootPart
+    local THead
+    local Accessory
+    local Handle
+
+    if not Character or not Humanoid or not RootPart then
+        Fluent:Notify({
+            Title = "Error",
+            Content = "Your character not found!",
+            Duration = 3
+        })
+        return
+    end
+
+    if TCharacter:FindFirstChildOfClass("Humanoid") then
+        THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+    end
+    if THumanoid and THumanoid.RootPart then
+        TRootPart = THumanoid.RootPart
+    end
+    if TCharacter:FindFirstChild("Head") then
+        THead = TCharacter.Head
+    end
+    if TCharacter:FindFirstChildOfClass("Accessory") then
+        Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+    end
+    if Accessory and Accessory:FindFirstChild("Handle") then
+        Handle = Accessory.Handle
+    end
+
+    if RootPart.Velocity.Magnitude < 50 then
+        getgenv().OldPos = RootPart.CFrame
+    end
+    if THumanoid and THumanoid.Sit then
+        Fluent:Notify({
+            Title = "Error",
+            Content = "Target is sitting!",
+            Duration = 3
+        })
+        return
+    end
+
+    -- Freeze camera from current position
+    local freezeCameraCFrame = Camera.CFrame
+    local cameraConnection
+    cameraConnection = RunService.RenderStepped:Connect(function()
+        Camera.CFrame = freezeCameraCFrame
+    end)
+
+    if THead then
+        workspace.CurrentCamera.CameraSubject = THead
+    elseif not THead and Handle then
+        workspace.CurrentCamera.CameraSubject = Handle
+    elseif THumanoid and TRootPart then
+        workspace.CurrentCamera.CameraSubject = THumanoid
+    end
+    if not TCharacter:FindFirstChildWhichIsA("BasePart") then
+        cameraConnection:Disconnect()
+        return
+    end
+
+    local FPos = function(BasePart, Pos, Ang)
+        RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+        Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+        RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+        RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+    end
+
+    local SFBasePart = function(BasePart)
+        local TimeToWait = 2
+        local Time = tick()
+        local Angle = 0
+
+        repeat
+            if RootPart and THumanoid then
+                if BasePart.Velocity.Magnitude < 50 then
+                    Angle = Angle + 100
+
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(2.25, 1.5, -2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(-2.25, -1.5, 2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                    task.wait()
+                else
+                    FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                    task.wait()
+
+                    FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
+                    task.wait()
+                end
+            else
+                break
+            end
+        until BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
+    end
+
+    workspace.FallenPartsDestroyHeight = 0/0
+
+    local BV = Instance.new("BodyVelocity")
+    BV.Name = "EpixVel"
+    BV.Parent = RootPart
+    BV.Velocity = Vector3.new(9e8, 9e8, 9e8)
+    BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
+
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+
+    if TRootPart and THead then
+        if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
+            SFBasePart(THead)
+        else
+            SFBasePart(TRootPart)
+        end
+    elseif TRootPart and not THead then
+        SFBasePart(TRootPart)
+    elseif not TRootPart and THead then
+        SFBasePart(THead)
+    elseif not TRootPart and not THead and Accessory and Handle then
+        SFBasePart(Handle)
+    else
+        cameraConnection:Disconnect()
+        return
+    end
+
+    BV:Destroy()
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+
+    -- Restore normal camera control
+    cameraConnection:Disconnect()
+    workspace.CurrentCamera.CameraSubject = Humanoid
+
+    repeat
+        RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+        Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+        Humanoid:ChangeState("GettingUp")
+        for _, x in pairs(Character:GetChildren()) do
+            if x:IsA("BasePart") then
+                x.Velocity, x.RotVelocity = Vector3.new(), Vector3.new()
+            end
+        end
+        task.wait()
+    until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
+    
+    Fluent:Notify({
+        Title = "Fling Complete",
+        Content = "Successfully flung " .. TargetPlayer.Name,
+        Duration = 3
+    })
+end
+-- ================================================
+
 -- ================= UI =================
 local Section1 = Tabs.Main:AddSection("Boss Farming")
 
@@ -192,7 +390,7 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
     Callback = function(state)
         AutoWhisEnabled = state
         if state then
-            AutoFarmEnabled = state
+            AutoFarmEnabled = false
             AutoFarmGamemodeEnabled = false
             AutoLowLevelEnabled = false
             SelectedBossName = "Beerus"
@@ -233,17 +431,30 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
 
 local Section3_5 = Tabs.Troll:AddSection("Troll")
 
-local DropdownTroll = Tabs.Troll:AddDropdown("TrollDropdown", {
-    Title = "Select Player",
-    Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
+-- Player dropdown that updates constantly
+PlayerDropdown = Tabs.Troll:AddDropdown("PlayerDropdown", {
+    Title = "Select Player to Fling",
+    Values = getAllPlayers(),
     Multi = false,
-    Default = 1,
+    Default = nil,
+    Callback = function(value)
+        SelectedPlayer = value
+    end
 })
 
+-- Fling button
 Tabs.Troll:AddButton({
     Title = "Fling",
     Callback = function()
-        print("Hello, world!")
+        if SelectedPlayer then
+            SkidFling(SelectedPlayer)
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Please select a player first!",
+                Duration = 3
+            })
+        end
     end
 })
 
@@ -373,15 +584,24 @@ task.spawn(function()
     end
 end)
 
--- Update dropdown values constantly using the stored reference
+-- Update boss dropdown values constantly
 task.spawn(function()
     while true do
         if BossDropdown then
             local nearbyBosses = getNearbyBosses()
-            
-            -- Simple direct update every 0.05 seconds
             BossDropdown:SetValues(nearbyBosses)
         end
         task.wait(0.05)
+    end
+end)
+
+-- Update player dropdown values constantly (every 0.005 seconds as requested)
+task.spawn(function()
+    while true do
+        if PlayerDropdown then
+            local players = getAllPlayers()
+            PlayerDropdown:SetValues(players)
+        end
+        task.wait(0.05) -- Updated to 0.005 seconds as requested
     end
 end)

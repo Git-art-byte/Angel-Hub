@@ -202,30 +202,22 @@ local function collectDragonBalls()
     end
 end
 
--- Get TOP timer text safely
+-- Get TOP timer text (just reads the billboard once)
 local function getTOPTimerText()
-    local success, result = pcall(function()
-        local topSystem = workspace:FindFirstChild("TopSystem")
-        if topSystem then
-            local slane = topSystem:FindFirstChild("slane")
-            if slane then
-                local billboard = slane:FindFirstChild("BillboardGui")
-                if billboard then
-                    local textLabel = billboard:FindFirstChild("TextLabel")
-                    if textLabel then
-                        return textLabel.Text
-                    end
+    local topSystem = workspace:FindFirstChild("TopSystem")
+    if topSystem then
+        local slane = topSystem:FindFirstChild("slane")
+        if slane then
+            local billboard = slane:FindFirstChild("BillboardGui")
+            if billboard then
+                local textLabel = billboard:FindFirstChild("TextLabel")
+                if textLabel then
+                    return textLabel.Text
                 end
             end
         end
-        return "TOP Timer not available"
-    end)
-    
-    if success then
-        return result
-    else
-        return "Error loading TOP timer"
     end
+    return "TOP Timer not available"
 end
 
 -- ================= FLING SYSTEM =================
@@ -538,8 +530,8 @@ Tabs.MUI:AddToggle("AutoUIToggle", {
 -- TOP Section
 local Section6 = Tabs.TOP:AddSection("Tournament of Power")
 
--- Create a variable to store the paragraph for updating
-local TOPParagraph = Tabs.TOP:AddParagraph({
+-- Add paragraph once - it will show whatever text is in the billboard (which updates itself)
+Tabs.TOP:AddParagraph({
     Title = "Next TOP",
     Content = getTOPTimerText()
 })
@@ -721,17 +713,5 @@ task.spawn(function()
             PlayerDropdown:SetValues(players)
         end
         task.wait(0.05)
-    end
-end)
-
--- Update TOP timer paragraph constantly
-task.spawn(function()
-    while true do
-        if TOPParagraph then
-            local success, result = pcall(function()
-                TOPParagraph:SetContent(getTOPTimerText())
-            end)
-        end
-        task.wait(1) -- Update every second
     end
 end)

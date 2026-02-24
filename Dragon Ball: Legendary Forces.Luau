@@ -49,7 +49,14 @@ local AutoKiEnabled = false
 local AutoDBEnabled = false
 local AutoWhisEnabled = false
 local AutoUIEnabled = false
-local AutoFarmGamemodeEnabled = false -- New toggle
+local AutoFarmGamemodeEnabled = false
+local AutoSaibamanEnabled = false
+
+-- Saibaman specific variables
+local RADITZ_KILLS_NEEDED = 8
+local NAPPA_KILLS_NEEDED = 10
+local raditzKills = 0
+local nappaKills = 0
 -- ============================================
 
 -- Get boss list
@@ -93,6 +100,45 @@ local function getWorkspaceTargets()
     return targets
 end
 
+-- Get Saibaman targets (Raditz and Nappa)
+local function getSaibamanTargets()
+    local targets = {}
+    local bossesFolder = workspace:FindFirstChild("Bosses")
+    if not bossesFolder then return targets end
+    
+    -- Find Raditz
+    local raditz = bossesFolder:FindFirstChild("Raditz")
+    if raditz then
+        local hrp = raditz:FindFirstChild("HumanoidRootPart")
+        local humanoid = raditz:FindFirstChildOfClass("Humanoid")
+        if hrp and humanoid and humanoid.Health > 0 then
+            table.insert(targets, {
+                model = raditz,
+                hrp = hrp,
+                humanoid = humanoid,
+                name = "Raditz"
+            })
+        end
+    end
+    
+    -- Find Nappa
+    local nappa = bossesFolder:FindFirstChild("Nappa")
+    if nappa then
+        local hrp = nappa:FindFirstChild("HumanoidRootPart")
+        local humanoid = nappa:FindFirstChildOfClass("Humanoid")
+        if hrp and humanoid and humanoid.Health > 0 then
+            table.insert(targets, {
+                model = nappa,
+                hrp = hrp,
+                humanoid = humanoid,
+                name = "Nappa"
+            })
+        end
+    end
+    
+    return targets
+end
+
 -- ================= UI =================
 
 Tabs.Main:AddDropdown("BossSelectorDropdown", {
@@ -112,6 +158,8 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
         AutoFarmEnabled = state
         if state then
             AutoFarmGamemodeEnabled = false
+            AutoWhisEnabled = false
+            AutoSaibamanEnabled = false
         end
     end
 })
@@ -124,6 +172,7 @@ Tabs.Main:AddToggle("AutoFarmWhisToggle", {
         AutoFarmEnabled = state
         if state then
             AutoFarmGamemodeEnabled = false
+            AutoSaibamanEnabled = false
             SelectedBossName = "Beerus"
         end
     end
@@ -135,18 +184,35 @@ Tabs.Main:AddToggle("AutoFarmGameModeToggle", {
     Callback = function(state)
         AutoFarmGamemodeEnabled = state
         if state then
-            -- Disable other farm modes to prevent conflicts
             AutoFarmEnabled = false
             AutoWhisEnabled = false
+            AutoSaibamanEnabled = false
         end
     end
+})
+
+-- Saibaman Toggle with Progress
+local SaibamanProgress = Tabs.Main:AddParagraph({
+    Title = "Saibaman Progress",
+    Content = "Raditz: 0/8 | Nappa: 0/10"
 })
 
 Tabs.Main:AddToggle("AutoSaibamanToggle", {
     Title = "Auto Saibaman",
     Default = false,
     Callback = function(state)
-        print("hi")
+        AutoSaibamanEnabled = state
+        if state then
+            -- Disable other farm modes
+            AutoFarmEnabled = false
+            AutoWhisEnabled = false
+            AutoFarmGamemodeEnabled = false
+            -- Reset counters
+            raditzKills = 0
+            nappaKills = 0
+            -- Update progress display
+            SaibamanProgress:SetContent("Raditz: 0/8 | Nappa: 0/10")
+        end
     end
 })
 
@@ -263,6 +329,112 @@ task.spawn(function()
             ReplicatedStorage.Remotes.giveQuests:FireServer("Whis")
         end
         task.wait(5)
+    end
+end)
+
+-- Auto Saibaman loop
+task.spawn(function()
+    local currentTarget = nil
+    local questActive = false
+    local lastQuestTime = 0
+    local QUEST_COOLDOWN = 2 -- Cooldown between quest requests
+    local lastKillCheck = {}
+    
+    while true do
+        if AutoSaibamanEnabled then
+            local character = player.Character
+            local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if playerHrp then
+                -- Check if we need to start a new quest (every 18 kills or when first enabling)
+                if (raditzKills + nappaKills) >= (RADITZ_KILLS_NEEDED + NAPPA_KILLS_NEEDED) or (raditzKills == 0 and nappaKills == 0 and tick() - lastQuestTime > QUEST_COOLDOWN) then
+                    if tick() - lastQuestTime > QUEST_COOLDOWN then
+                        -- Fire the quest remote
+                        ReplicatedStorage.Remotes.giveQuests:FireServer("SaibamanQuest")
+                        questActive = true
+                        lastQuestTime = tick()
+                        
+                        -- Reset kill counters
+                        raditzKills = 0
+                        nappaKills = 0
+                        
+                        -- Update progress display
+                        SaibamanProgress:SetContent("Raditz: 0/8 | Nappa: 0/10")
+                        
+                        -- Small delay after starting quest
+                        task.wait(1)
+                    end
+                end
+                
+                -- Get current targets (Raditz and Nappa)
+                local targets = getSaibamanTargets()
+                
+                if #targets > 0 and questActive then
+                    -- Track health to detect kills
+                    for _, target in ipairs(targets) do
+                        if not lastKillCheck[target.name] then
+                            lastKillCheck[target.name] = target.humanoid.Health
+                        end
+                        
+                        -- Check if health decreased significantly (indicating a kill)
+                        if lastKillCheck[target.name] > 0 and target.humanoid.Health <= 0 then
+                            if target.name == "Raditz" and raditzKills < RADITZ_KILLS_NEEDED then
+                                raditzKills = raditzKills + 1
+                                print("Killed Raditz: " .. raditzKills .. "/" .. RADITZ_KILLS_NEEDED)
+                            elseif target.name == "Nappa" and nappaKills < NAPPA_KILLS_NEEDED then
+                                nappaKills = nappaKills + 1
+                                print("Killed Nappa: " .. nappaKills .. "/" .. NAPPA_KILLS_NEEDED)
+                            end
+                            
+                            -- Update progress display
+                            SaibamanProgress:SetContent("Raditz: " .. raditzKills .. "/8 | Nappa: " .. nappaKills .. "/10")
+                        end
+                        
+                        lastKillCheck[target.name] = target.humanoid.Health
+                    end
+                    
+                    -- Priority: Kill Raditz first (8 times), then Nappa (10 times)
+                    if raditzKills < RADITZ_KILLS_NEEDED then
+                        -- Find Raditz
+                        currentTarget = nil
+                        for _, target in ipairs(targets) do
+                            if target.name == "Raditz" then
+                                currentTarget = target
+                                break
+                            end
+                        end
+                    elseif nappaKills < NAPPA_KILLS_NEEDED then
+                        -- Find Nappa
+                        currentTarget = nil
+                        for _, target in ipairs(targets) do
+                            if target.name == "Nappa" then
+                                currentTarget = target
+                                break
+                            end
+                        end
+                    end
+                    
+                    -- Attack current target
+                    if currentTarget and currentTarget.hrp and currentTarget.humanoid and currentTarget.humanoid.Health > 0 then
+                        -- Teleport behind the boss
+                        playerHrp.CFrame = currentTarget.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
+                        
+                        -- Fire combat remote
+                        combatRemote:FireServer()
+                    else
+                        -- Target not found, wait a bit
+                        task.wait(0.5)
+                    end
+                else
+                    -- No targets available or quest not active
+                    if #targets == 0 then
+                        -- Wait for bosses to spawn
+                        task.wait(1)
+                    end
+                end
+            end
+        end
+        task.wait(TELEPORT_DELAY)
     end
 end)
 

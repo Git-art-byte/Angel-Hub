@@ -421,6 +421,13 @@ Tabs.DragonBall:AddButton({
     Callback = collectDragonBalls
 })
 
+Tabs.DragonBall:AddToogle("LoopDBToogle", {
+    Title = "Loop Get DB",
+    Default = false,
+    Callback = function()
+        print("hi")
+   end
+})
 -- MUI Tab
 Tabs.MUI:AddSection("MUI Chamber")
 

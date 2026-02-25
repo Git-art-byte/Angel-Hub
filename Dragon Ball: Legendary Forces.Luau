@@ -20,6 +20,7 @@ local Tabs = {
     Zeni = Window:AddTab({ Title = "Zeni", Icon = "dollar-sign" }),
     Gamemode = Window:AddTab({ Title = "Gamemode", Icon = "waves" }),
     Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "swords" }),
+    Top = Window:AddTab({ Title = "TOP", Icon = "circle" }),
     DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "circle-star" }),
     MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "users" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
@@ -475,6 +476,15 @@ Tabs.MUI:AddToggle("AutoUIToggle", {
     end
 })
 
+local Section6 = Tabs.Top:AddSection("Tournament of Power")
+
+Tabs.Top:AddToggle("AutoTopToggle", {
+    Title = "AutoFarm TOP Bosses",
+    Default = false,
+    Callback = function(state)
+        print("hi")
+    end
+})
 -- ================= LOGIC =================
 
 local function getBoss()

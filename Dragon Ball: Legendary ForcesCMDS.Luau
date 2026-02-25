@@ -1,6 +1,6 @@
 -- ANGEL HUB | Dragon Ball: Legendary Forces - Chat Commands
--- Clean & Modular Version with Roblox Notifications + Fixes & New Commands
 -- Prefix: !
+-- Features: loopfling (specific target + radius separate), auto-stop on death + resume on respawn, !tp command
 
 local PREFIX = "!"
 
@@ -13,18 +13,25 @@ local StarterGui        = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera      = Workspace.CurrentCamera
-local combatRemote = ReplicatedStorage:WaitForChild("Assets", 9e9)
-                     :WaitForChild("CombatAssets", 9e9)
-                     :WaitForChild("CombatRemotes", 9e9)
-                     :WaitForChild("ActivateCombat", 9e9)
+
+local combatRemote = ReplicatedStorage:WaitForChild("Assets")
+                     :WaitForChild("CombatAssets")
+                     :WaitForChild("CombatRemotes")
+                     :WaitForChild("ActivateCombat")
 
 -- Settings
-local TELEPORT_OFFSET = 3
-local TELEPORT_DELAY  = 0.05
+local TELEPORT_OFFSET = 3   -- for kill / farm
+local BACK_OFFSET     = 3   -- for farm
 local SCAN_DELAY      = 2
-local BACK_OFFSET     = 3
 
--- State Variables
+-- Loopfling
+local loopflingConnection        = nil
+local loopflingTarget            = nil          -- Player or nil
+local loopflingTargetConnections = {}
+local loopflingRadius            = 120
+local loopflingCooldown          = 0.5
+
+-- Other states
 local loopkillConnection  = nil
 local currentLoopBoss     = nil
 local farmGamemodeEnabled = false
@@ -36,481 +43,529 @@ local targetSpeed         = 16
 local targetJump          = 50
 local movementLoop        = nil
 
--- ────────────────────────────────────────────────
---  Notification Helper
--- ────────────────────────────────────────────────
+-- Notification helper
 local function notify(title, text, duration)
     duration = duration or 4
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = title or "Angel Hub",
-            Text  = text or "Message",
+            Text  = text or "",
             Duration = duration,
             Icon = ""
         })
     end)
 end
 
--- ────────────────────────────────────────────────
---  Helper Functions
--- ────────────────────────────────────────────────
-local function getCharacterHRP()
+-- Helpers
+local function getHRP()
     local char = LocalPlayer.Character
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local function getHumanoid()
+local function getHum()
     local char = LocalPlayer.Character
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
-local function findPlayer(namePart)
-    namePart = namePart:lower()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            if plr.Name:lower():find(namePart, 1, true) or plr.DisplayName:lower():find(namePart, 1, true) then
-                return plr
+local function findPlayer(part)
+    part = part:lower()
+    for _, p in Players:GetPlayers() do
+        if p ~= LocalPlayer then
+            if p.Name:lower():find(part,1,true) or p.DisplayName:lower():find(part,1,true) then
+                return p
             end
         end
     end
     return nil
 end
 
-local function getBoss(bossName)
-    local bossesFolder = Workspace:FindFirstChild("Bosses")
-    if not bossesFolder then return nil end
-    bossName = bossName:lower()
-    for _, boss in ipairs(bossesFolder:GetChildren()) do
-        if boss:IsA("Model") and boss.Name:lower() == bossName then
-            local hrp = boss:FindFirstChild("HumanoidRootPart")
-            local hum = boss:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                return hrp
-            end
+local function getBossHRP(name)
+    local f = Workspace:FindFirstChild("Bosses")
+    if not f then return nil end
+    name = name:lower()
+    for _, b in f:GetChildren() do
+        if b:IsA("Model") and b.Name:lower() == name then
+            local hrp = b:FindFirstChild("HumanoidRootPart")
+            local h = b:FindFirstChildOfClass("Humanoid")
+            if hrp and h and h.Health > 0 then return hrp end
         end
     end
     return nil
 end
 
-local function getWorkspaceTargets(myHrp)
-    local targets = {}
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") and obj ~= LocalPlayer.Character then
-            local hrp = obj:FindFirstChild("HumanoidRootPart")
-            local hum = obj:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                table.insert(targets, {hrp = hrp, hum = hum})
+local function getWorkspaceTargets()
+    local t = {}
+    for _, o in Workspace:GetChildren() do
+        if o:IsA("Model") and o ~= LocalPlayer.Character then
+            local hrp = o:FindFirstChild("HumanoidRootPart")
+            local h = o:FindFirstChildOfClass("Humanoid")
+            if hrp and h and h.Health > 0 then
+                table.insert(t, {hrp=hrp, hum=h})
             end
         end
     end
-    return targets
+    return t
 end
 
--- ────────────────────────────────────────────────
---  Movement Loop Manager
--- ────────────────────────────────────────────────
 local function startMovementLoop()
     if movementLoop then return end
     movementLoop = RunService.Heartbeat:Connect(function()
-        local hum = getHumanoid()
-        if hum then
-            hum.WalkSpeed = targetSpeed
-            hum.JumpPower = targetJump
-            hum.UseJumpPower = true
+        local h = getHum()
+        if h then
+            h.WalkSpeed = targetSpeed
+            h.JumpPower = targetJump
+            h.UseJumpPower = true
         end
     end)
 end
 
--- ────────────────────────────────────────────────
---  Core Features
--- ────────────────────────────────────────────────
-local function collectDragonBalls()
-    local hrp = getCharacterHRP()
-    if not hrp then 
-        notify("Error", "No character / HRP!")
-        return 
-    end
-
-    local success, folders = pcall(function()
-        return {
-            Workspace:WaitForChild("DragonBalls", 5):WaitForChild("PorungaBalls", 5),
-            Workspace:WaitForChild("DragonBalls", 5):WaitForChild("ShenronBalls", 5)
-        }
-    end)
-
-    if not success then
-        notify("Error", "DragonBalls folder not found!")
-        return
-    end
-
-    local TOUCH_DELAY = 0.15
-    for _, folder in ipairs(folders) do
-        for i = 1, 7 do
-            local ball = folder:FindFirstChild(tostring(i))
-            if ball then
-                local corpo = ball:FindFirstChild("corpo")
-                local touchInterest = corpo and corpo:FindFirstChild("TouchInterest")
-                if touchInterest then
-                    firetouchinterest(hrp, touchInterest.Parent, 0)
-                    task.wait()
-                    firetouchinterest(hrp, touchInterest.Parent, 1)
-                    task.wait(TOUCH_DELAY)
-                end
-            end
-        end
-    end
-    notify("Dragon Balls", "All collected!")
-end
-
-local function SkidFling(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then 
-        notify("Error", "Invalid target!")
-        return 
-    end
+-- Fling function
+local function SkidFling(target)
+    if not target or not target.Character then return false end
 
     local char = LocalPlayer.Character
-    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = hum and hum.RootPart
-    if not char or not hum or not root then 
-        notify("Error", "Your character issue!")
-        return 
-    end
+    if not char or not hum or not root then return false end
 
-    local tchar = targetPlayer.Character
-    local thum = tchar:FindFirstChildOfClass("Humanoid")
+    local tch = target.Character
+    local thum = tch:FindFirstChildOfClass("Humanoid")
     local troot = thum and thum.RootPart
-    local thead = tchar:FindFirstChild("Head")
-    local accessory = tchar:FindFirstChildOfClass("Accessory")
-    local handle = accessory and accessory:FindFirstChild("Handle")
+    local thead = tch:FindFirstChild("Head")
+    if not thum or not troot then return false end
 
-    if thum and thum.Sit then 
-        notify("Error", "Target is sitting!")
-        return 
-    end
+    if thum.Sit then return false end
 
     if root.AssemblyLinearVelocity.Magnitude < 50 then
         getgenv().OldPos = root.CFrame
     end
 
-    local oldCamCFrame = Camera.CFrame
-    local camConn = RunService.RenderStepped:Connect(function()
-        Camera.CFrame = oldCamCFrame
-    end)
+    local oldcam = Camera.CFrame
+    local camc = RunService.RenderStepped:Connect(function() Camera.CFrame = oldcam end)
 
-    if thead then
-        Camera.CameraSubject = thead
-    elseif handle then
-        Camera.CameraSubject = handle
-    elseif thum and troot then
-        Camera.CameraSubject = thum
+    Camera.CameraSubject = thead or thum
+
+    local function FPos(p, off, ang)
+        root.CFrame = CFrame.new(p.Position) * off * ang
+        char:SetPrimaryPartCFrame(CFrame.new(p.Position) * off * ang)
+        root.AssemblyLinearVelocity = Vector3.new(9e7, 9e7*10, 9e7)
+        root.AssemblyAngularVelocity = Vector3.new(9e8,9e8,9e8)
     end
 
-    local function FPos(basepart, pos, ang)
-        root.CFrame = CFrame.new(basepart.Position) * pos * ang
-        char:SetPrimaryPartCFrame(CFrame.new(basepart.Position) * pos * ang)
-        root.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
-        root.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
-        root.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 10, 9e7)
-        root.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
-    end
-
-    local function SFBasePart(basepart)
-        local timeout = tick() + 2
-        local angle = 0
+    local function SF(p)
+        local endt = tick() + 1.8
+        local a = 0
         repeat
             if not root or not thum then break end
-            local velMag = basepart.AssemblyLinearVelocity.Magnitude
-            if velMag < 50 then
-                angle = angle + 100
-                FPos(basepart, CFrame.new(0, 1.5, 0) + thum.MoveDirection * velMag / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(0, -1.5, 0) + thum.MoveDirection * velMag / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(2.25, 1.5, -2.25) + thum.MoveDirection * velMag / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(-2.25, -1.5, 2.25) + thum.MoveDirection * velMag / 1.25, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(0, 1.5, 0) + thum.MoveDirection, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(0, -1.5, 0) + thum.MoveDirection, CFrame.Angles(math.rad(angle), 0, 0))
-                task.wait()
+            local vm = p.AssemblyLinearVelocity.Magnitude
+            if vm < 50 then
+                a = a + 120
+                FPos(p, CFrame.new(0,math.random(-2,2),0), CFrame.Angles(math.rad(a),math.rad(a),0))
+                task.wait(0.06)
             else
-                FPos(basepart, CFrame.new(0, 1.5, thum.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
-                task.wait()
-                FPos(basepart, CFrame.new(0, -1.5, -thum.WalkSpeed), CFrame.Angles(0, 0, 0))
-                task.wait()
+                FPos(p, CFrame.new(0,2,thum.WalkSpeed*1.2), CFrame.Angles(math.rad(80),0,0))
+                task.wait(0.07)
             end
-        until basepart.AssemblyLinearVelocity.Magnitude > 500 or basepart.Parent ~= tchar or not targetPlayer.Parent or tick() > timeout
+        until p.AssemblyLinearVelocity.Magnitude > 400 or not p.Parent or tick() > endt
     end
 
-    workspace.FallenPartsDestroyHeight = 0 / 0
+    local fp = (troot.Position - (thead and thead.Position or troot.Position)).Magnitude > 4 and thead or troot
+
+    workspace.FallenPartsDestroyHeight = -math.huge
+
     local bv = Instance.new("BodyVelocity")
-    bv.Name = "EpixVel"
+    bv.Velocity = Vector3.new(9e8,9e8,9e8)
+    bv.MaxForce = Vector3.new(1/0,1/0,1/0)
     bv.Parent = root
-    bv.Velocity = Vector3.new(9e8, 9e8, 9e8)
-    bv.MaxForce = Vector3.new(1 / 0, 1 / 0, 1 / 0)
+
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 
-    local flingPart = nil
-    if troot and thead and (troot.Position - thead.Position).Magnitude > 5 then
-        flingPart = thead
-    elseif troot then
-        flingPart = troot
-    elseif thead then
-        flingPart = thead
-    elseif handle then
-        flingPart = handle
-    end
-
-    if flingPart then
-        SFBasePart(flingPart)
-    end
+    SF(fp)
 
     bv:Destroy()
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-    camConn:Disconnect()
+    camc:Disconnect()
     Camera.CameraSubject = hum
-    workspace.FallenPartsDestroyHeight = math.huge
 
-    -- Enhanced cleanup to prevent self-fling
-    local cleanupConn = RunService.Heartbeat:Connect(function()
-        if root and getgenv().OldPos then
-            root.CFrame = getgenv().OldPos * CFrame.new(0, 0.5, 0)
-            char:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, 0.5, 0))
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-            root.Velocity = Vector3.new(0, 0, 0)
-            root.RotVelocity = Vector3.new(0, 0, 0)
-            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            for _, part in pairs(char:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Velocity = Vector3.new(0, 0, 0)
-                    part.RotVelocity = Vector3.new(0, 0, 0)
-                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                end
+    task.spawn(function()
+        for i=1,25 do
+            if root and getgenv().OldPos then
+                root.CFrame = getgenv().OldPos * CFrame.new(0,0.4,0)
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+            end
+            task.wait(0.04)
+        end
+    end)
+
+    return true
+end
+
+-- Loop Fling (specific target mode)
+local function forceStopLoopFling(reason)
+    if loopflingConnection then loopflingConnection:Disconnect() loopflingConnection = nil end
+    for _,c in loopflingTargetConnections do pcall(c.Disconnect,c) end
+    loopflingTargetConnections = {}
+    loopflingTarget = nil
+    notify("Loop Fling", "Stopped: "..(reason or "manual"))
+end
+
+local function startLoopFling()
+    if loopflingConnection then loopflingConnection:Disconnect() end
+    for _,c in loopflingTargetConnections do pcall(c.Disconnect,c) end
+    loopflingTargetConnections = {}
+
+    local last = 0
+
+    loopflingConnection = RunService.Heartbeat:Connect(function()
+        if tick()-last < loopflingCooldown then return end
+        local hrp = getHRP() if not hrp then return end
+
+        if not loopflingTarget or not loopflingTarget.Character then return end
+
+        local ch = loopflingTarget.Character
+        local h = ch:FindFirstChildOfClass("Humanoid")
+        local r = ch:FindFirstChild("HumanoidRootPart")
+
+        if not h or not r or h.Health <= 0 then
+            forceStopLoopFling("target died / invalid")
+            return
+        end
+
+        if (hrp.Position - r.Position).Magnitude <= loopflingRadius then
+            if SkidFling(loopflingTarget) then
+                last = tick()
             end
         end
     end)
-    task.wait(1)  -- Extended cleanup time
-    cleanupConn:Disconnect()
 
-    notify("Fling", "Successfully flung " .. targetPlayer.Name)
+    -- Monitor target death / leave / respawn
+    local function check()
+        if not loopflingTarget then return end
+        if not loopflingTarget.Parent then forceStopLoopFling("left server") return end
+        local ch = loopflingTarget.Character
+        if not ch then forceStopLoopFling("no character") return end
+        local h = ch:FindFirstChildOfClass("Humanoid")
+        if not h or h.Health <= 0 then forceStopLoopFling("died") end
+    end
+
+    check()
+
+    table.insert(loopflingTargetConnections, loopflingTarget.CharacterAdded:Connect(check))
+    table.insert(loopflingTargetConnections, loopflingTarget.CharacterRemoving:Connect(check))
+
+    local ch = loopflingTarget.Character
+    if ch then
+        local h = ch:FindFirstChildOfClass("Humanoid")
+        if h then
+            table.insert(loopflingTargetConnections, h:GetPropertyChangedSignal("Health"):Connect(function()
+                if h.Health <= 0 then forceStopLoopFling("died") end
+            end))
+        end
+    end
+
+    notify("Loop Fling", "Target locked → " .. loopflingTarget.Name .. " | radius " .. loopflingRadius)
 end
 
-local function killBossOnce(bossName)
-    local bossHrp = getBoss(bossName)
-    if not bossHrp then
-        notify("Error", "Boss not found: " .. bossName)
-        return
+local function stopLoopFling()
+    forceStopLoopFling("stopped")
+end
+
+-- Dragon Balls
+local function collectDB()
+    local hrp = getHRP() if not hrp then notify("Error","No HRP") return end
+
+    local folders = {
+        Workspace:WaitForChild("DragonBalls"):WaitForChild("PorungaBalls"),
+        Workspace:WaitForChild("DragonBalls"):WaitForChild("ShenronBalls")
+    }
+
+    for _,f in folders do
+        for i=1,7 do
+            local b = f:FindFirstChild(tostring(i))
+            if b then
+                local c = b:FindFirstChild("corpo")
+                local t = c and c:FindFirstChild("TouchInterest")
+                if t then
+                    firetouchinterest(hrp, t.Parent, 0) task.wait()
+                    firetouchinterest(hrp, t.Parent, 1) task.wait(0.15)
+                end
+            end
+        end
     end
-    local myHrp = getCharacterHRP()
-    if not myHrp then return end
-    myHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, TELEPORT_OFFSET)
+    notify("Dragon Balls","Collected!")
+end
+
+-- Boss
+local function killBoss(name)
+    local hrp = getBossHRP(name)
+    if not hrp then notify("Error","Boss not found") return end
+    local my = getHRP() if not my then return end
+    my.CFrame = hrp.CFrame * CFrame.new(0,0,TELEPORT_OFFSET)
     combatRemote:FireServer()
 end
 
-local function startLoopKill(bossName)
+local function startLoopKill(name)
     if loopkillConnection then loopkillConnection:Disconnect() end
-    currentLoopBoss = bossName:lower()
+    currentLoopBoss = name:lower()
     loopkillConnection = RunService.Heartbeat:Connect(function()
-        killBossOnce(currentLoopBoss)
+        killBoss(currentLoopBoss)
     end)
-    notify("Loopkill", "Started on " .. bossName)
+    notify("Loop Kill","Started → "..name)
 end
 
 local function stopLoopKill()
-    if loopkillConnection then
-        loopkillConnection:Disconnect()
-        loopkillConnection = nil
-    end
+    if loopkillConnection then loopkillConnection:Disconnect() loopkillConnection = nil end
     currentLoopBoss = nil
-    notify("Loopkill", "Stopped!")
+    notify("Loop Kill","Stopped")
 end
 
-local function startFarmGamemode()
+-- Farm Gamemode
+local function startFarmGM()
     if farmConnection then farmConnection:Disconnect() end
     farmGamemodeEnabled = true
     farmConnection = RunService.Heartbeat:Connect(function()
-        local myHrp = getCharacterHRP()
-        if not myHrp then return end
+        local my = getHRP() if not my then return end
         if tick() - farmLastScanTime > SCAN_DELAY then
-            local targets = getWorkspaceTargets(myHrp)
-            local closestDist = math.huge
-            local closest = nil
-            for _, target in ipairs(targets) do
-                local dist = (myHrp.Position - target.hrp.Position).Magnitude
-                if dist < closestDist then
-                    closestDist = dist
-                    closest = target
-                end
+            local ts = getWorkspaceTargets()
+            local cd, ct = math.huge, nil
+            for _,t in ts do
+                local d = (my.Position - t.hrp.Position).Magnitude
+                if d < cd then cd = d ct = t end
             end
-            farmCurrentTarget = closest
+            farmCurrentTarget = ct
             farmLastScanTime = tick()
         end
         if farmCurrentTarget and farmCurrentTarget.hum.Health > 0 then
-            myHrp.CFrame = farmCurrentTarget.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
+            my.CFrame = farmCurrentTarget.hrp.CFrame * CFrame.new(0,0,BACK_OFFSET)
             combatRemote:FireServer()
         else
             farmLastScanTime = 0
         end
     end)
-    notify("Farm Gamemode", "Started (waves autofarm)!")
+    notify("Farm Gamemode","ON")
 end
 
-local function stopFarmGamemode()
-    if farmConnection then
-        farmConnection:Disconnect()
-        farmConnection = nil
-    end
+local function stopFarmGM()
+    if farmConnection then farmConnection:Disconnect() farmConnection = nil end
     farmGamemodeEnabled = false
     farmCurrentTarget = nil
-    notify("Farm Gamemode", "Stopped!")
+    notify("Farm Gamemode","OFF")
 end
 
--- ────────────────────────────────────────────────
---  Command Table
--- ────────────────────────────────────────────────
+-- New: Teleport to player
+local function teleportToPlayer(namePart)
+    local target = findPlayer(namePart)
+    if not target or not target.Character then
+        notify("TP Error", "Player not found or no character")
+        return
+    end
+
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    if not targetHRP then
+        notify("TP Error", "Target has no HumanoidRootPart")
+        return
+    end
+
+    local myHRP = getHRP()
+    if not myHRP then
+        notify("TP Error", "You have no HumanoidRootPart")
+        return
+    end
+
+    -- Teleport behind the player
+    myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 5)  -- 5 studs behind
+    notify("Teleport", "Teleported to " .. target.Name)
+end
+
+-- Commands table
 local commands = {
     help = {
-        desc = "List all commands",
+        desc = "Show commands",
         func = function()
-            notify("Angel Hub", "Commands:")
-            for cmdName, info in pairs(commands) do
-                task.spawn(function()
-                    notify(PREFIX .. cmdName, info.desc)
-                end)
-                task.wait(0.2)
-            end
+            notify("Commands", 
+                "!fling <name>\n" ..
+                "!db\n" ..
+                "!kill <boss>\n" ..
+                "!loopkill <boss>\n" ..
+                "!unloopkill\n" ..
+                "!speed <num>\n" ..
+                "!jump <num>\n" ..
+                "!view <name>\n" ..
+                "!unview\n" ..
+                "!farmgamemode\n" ..
+                "!loopfling <name> / <radius>\n" ..
+                "!unloopfling\n" ..
+                "!tp <name>"
+            )
         end
     },
+
     fling = {
-        desc = "Fling player (partial match)",
+        desc = "Fling player",
         func = function(args)
-            if not args[1] then
-                notify("Usage", PREFIX .. "fling <name/part>")
-                return
-            end
-            local targetPart = table.concat(args, " ")
-            local target = findPlayer(targetPart)
+            if not args[1] then return end
+            local target = findPlayer(table.concat(args, " "))
             if target then
                 SkidFling(target)
+                notify("Fling", "→ " .. target.Name)
             else
-                notify("Error", "Player not found!")
+                notify("Error", "Player not found")
             end
         end
     },
-    db = {
-        desc = "Collect Dragon Balls",
-        func = collectDragonBalls
-    },
+
+    db = { desc = "Collect dragon balls", func = collectDB },
+
     kill = {
         desc = "Kill boss once",
         func = function(args)
-            if not args[1] then return notify("Usage", PREFIX .. "kill <boss>") end
-            local bossName = table.concat(args, " ")
-            killBossOnce(bossName)
+            if not args[1] then return end
+            killBoss(table.concat(args, " "))
         end
     },
+
     loopkill = {
-        desc = "Loopkill boss",
+        desc = "Loop kill boss",
         func = function(args)
-            if not args[1] then return notify("Usage", PREFIX .. "loopkill <boss>") end
-            local bossName = table.concat(args, " ")
-            startLoopKill(bossName)
+            if not args[1] then return end
+            startLoopKill(table.concat(args, " "))
         end
     },
-    unloopkill = {
-        desc = "Stop loopkill",
-        func = stopLoopKill
-    },
+
+    unloopkill = { desc = "Stop loop kill", func = stopLoopKill },
+
     speed = {
-        desc = "Set speed (persistent)",
+        desc = "Set walkspeed",
         func = function(args)
-            local num = tonumber(args[1])
-            if not num then return notify("Usage", PREFIX .. "speed <number>") end
-            targetSpeed = num
-            startMovementLoop()
-            notify("Speed", "Set to " .. num .. " (anti-reset)")
+            local n = tonumber(args[1])
+            if n then
+                targetSpeed = n
+                startMovementLoop()
+                notify("Speed", "Set to " .. n)
+            end
         end
     },
+
     jump = {
-        desc = "Set jump power (persistent)",
+        desc = "Set jump power",
         func = function(args)
-            local num = tonumber(args[1])
-            if not num then return notify("Usage", PREFIX .. "jump <number>") end
-            targetJump = num
-            startMovementLoop()
-            notify("Jump", "Set to " .. num .. " (anti-reset)")
+            local n = tonumber(args[1])
+            if n then
+                targetJump = n
+                startMovementLoop()
+                notify("Jump", "Set to " .. n)
+            end
         end
     },
+
     view = {
-        desc = "View/spectate player",
+        desc = "View player",
         func = function(args)
-            if not args[1] then return notify("Usage", PREFIX .. "view <name/part>") end
-            local targetPart = table.concat(args, " ")
-            local target = findPlayer(targetPart)
-            if not target or not target.Character then 
-                return notify("Error", "Player/character not found!") 
-            end
-            local targetHum = target.Character:FindFirstChildOfClass("Humanoid") or target.Character:FindFirstChild("Head")
-            if targetHum then
-                Camera.CameraSubject = targetHum
-                viewTarget = target
-                notify("View", "Now viewing " .. target.Name)
+            if not args[1] then return end
+            local target = findPlayer(table.concat(args, " "))
+            if target and target.Character then
+                local sub = target.Character:FindFirstChild("Humanoid") or target.Character:FindFirstChild("Head")
+                if sub then
+                    Camera.CameraSubject = sub
+                    viewTarget = target
+                    notify("View", "→ " .. target.Name)
+                end
             end
         end
     },
+
     unview = {
         desc = "Stop viewing",
         func = function()
-            local hum = getHumanoid()
-            if hum then
-                Camera.CameraSubject = hum
+            if getHum() then
+                Camera.CameraSubject = getHum()
                 viewTarget = nil
-                notify("View", "Reset to self")
+                notify("View", "Back to self")
             end
         end
     },
+
     farmgamemode = {
-        desc = "Toggle autofarm gamemode/waves",
+        desc = "Toggle waves farm",
         func = function()
             if farmGamemodeEnabled then
-                stopFarmGamemode()
+                stopFarmGM()
             else
-                startFarmGamemode()
+                startFarmGM()
             end
+        end
+    },
+
+    loopfling = {
+        desc = "Loop fling specific player OR change radius",
+        func = function(args)
+            if not args[1] then
+                notify("Usage", 
+                    "!loopfling <playername>   → target only this guy\n" ..
+                    "!loopfling <number>       → change radius only\n" ..
+                    "Current radius: " .. loopflingRadius
+                )
+                return
+            end
+
+            local input = args[1]
+            local rad = tonumber(input)
+
+            if rad then
+                if rad < 20 or rad > 1000 then
+                    notify("Error", "Radius 20–1000 only")
+                    return
+                end
+                loopflingRadius = rad
+                notify("LoopFling Radius", "Set to " .. rad .. " studs")
+                return
+            end
+
+            local target = findPlayer(input)
+            if not target then
+                notify("Error", "Player not found")
+                return
+            end
+
+            loopflingTarget = target
+            startLoopFling()
+        end
+    },
+
+    unloopfling = {
+        desc = "Stop loop fling",
+        func = stopLoopFling
+    },
+
+    tp = {
+        desc = "Teleport to player",
+        func = function(args)
+            if not args[1] then
+                notify("Usage", "!tp <playername>")
+                return
+            end
+            teleportToPlayer(table.concat(args, " "))
         end
     }
 }
 
--- ────────────────────────────────────────────────
---  Chat Handler
--- ────────────────────────────────────────────────
-LocalPlayer.Chatted:Connect(function(message)
-    local msgLower = message:lower()
-    if not msgLower:match("^" .. PREFIX) then return end
-
-    local trimmed = message:gsub("^%s*(.-)%s*$", "%1")
+-- Chat listener
+LocalPlayer.Chatted:Connect(function(msg)
+    if not msg:lower():match("^"..PREFIX) then return end
     local parts = {}
-    for word in trimmed:gmatch("%S+") do
-        table.insert(parts, word)
-    end
-    if #parts == 0 then return end
+    for w in msg:gmatch("%S+") do table.insert(parts, w) end
+    if #parts < 1 then return end
 
-    local cmdRaw = parts[1]:lower()
-    local cmdName = cmdRaw:sub(#PREFIX + 1)
-
-    local cmd = commands[cmdName]
+    local cmdn = parts[1]:lower():sub(#PREFIX + 1)
+    local cmd = commands[cmdn]
     if cmd and cmd.func then
         local args = {}
         for i = 2, #parts do table.insert(args, parts[i]) end
         cmd.func(args)
     else
-        notify("Unknown", cmdRaw .. " not found!")
-        notify("Help", "Use " .. PREFIX .. "help")
+        notify("Unknown", "Use !help")
     end
 end)
 
-notify("Angel Hub", "Loaded! Prefix: " .. PREFIX)
-notify("Tip", PREFIX .. "help for commands")
+notify("Angel Hub", "Loaded | !help for commands")

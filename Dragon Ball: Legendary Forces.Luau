@@ -48,23 +48,24 @@ local combatRemote = ReplicatedStorage.Assets.CombatAssets.CombatRemotes.Activat
 -- ================= SETTINGS =================
 local TELEPORT_DELAY = 0.05
 local BACK_OFFSET = 3
-local SCAN_DELAY = 2 -- Delay between scanning for new targets
+local SCAN_DELAY = 2
 
 local AutoFarmEnabled = false
-local SelectedBossName = nil
-
 local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
 local AutoLowLevelEnabled = false
+local AutoTopEnabled = false          -- ← NEW
 
--- Variable to store dropdown references
+local SelectedBossName = nil
+local SelectedPlayer = nil
+
+-- Dropdown references
 local BossDropdown = nil
 local PlayerDropdown = nil
-local SelectedPlayer = nil
+
 -- ============================================
 
--- Get all players in the server (updates constantly)
 local function getAllPlayers()
     local playerList = {}
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -75,7 +76,6 @@ local function getAllPlayers()
     return playerList
 end
 
--- Get nearby bosses (within 500 studs)
 local function getNearbyBosses()
     local list = {}
     local bossesFolder = workspace:FindFirstChild("Bosses")
@@ -90,7 +90,6 @@ local function getNearbyBosses()
             local hrp = boss:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local distance = (playerHrp.Position - hrp.Position).Magnitude
-                -- Only show bosses within 500 studs
                 if distance <= 500 then
                     table.insert(list, boss.Name)
                 end
@@ -101,18 +100,15 @@ local function getNearbyBosses()
     return list
 end
 
--- Get all valid targets in workspace (models with HumanoidRootPart)
 local function getWorkspaceTargets()
     local targets = {}
     
     for _, obj in ipairs(Workspace:GetChildren()) do
-        -- Check if it's a model with HumanoidRootPart and has health
         if obj:IsA("Model") then
             local hrp = obj:FindFirstChild("HumanoidRootPart")
             local humanoid = obj:FindFirstChildOfClass("Humanoid")
             
             if hrp and humanoid and humanoid.Health > 0 then
-                -- Make sure it's not the player
                 if obj ~= player.Character then
                     table.insert(targets, {
                         model = obj,
@@ -127,7 +123,6 @@ local function getWorkspaceTargets()
     return targets
 end
 
--- Dragon Ball collection function
 local function collectDragonBalls()
     local TOUCH_DELAY = 0.2
 
@@ -144,7 +139,6 @@ local function collectDragonBalls()
         end
     end
 
-    -- Collect balls once
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         for _, folder in ipairs(dragonBallFolders) do
             for i = 1, 7 do
@@ -180,11 +174,7 @@ local SkidFling = function(TargetPlayer)
     end
     
     if not TargetPlayer or not TargetPlayer.Character then 
-        Fluent:Notify({
-            Title = "Error",
-            Content = "Player not found or invalid!",
-            Duration = 3
-        })
+        Fluent:Notify({Title = "Error", Content = "Player not found or invalid!", Duration = 3})
         return 
     end
 
@@ -193,63 +183,35 @@ local SkidFling = function(TargetPlayer)
     local RootPart = Humanoid and Humanoid.RootPart
 
     local TCharacter = TargetPlayer.Character
-    local THumanoid
-    local TRootPart
-    local THead
-    local Accessory
-    local Handle
+    local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+    local TRootPart = THumanoid and THumanoid.RootPart
+    local THead = TCharacter:FindFirstChild("Head")
+    local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+    local Handle = Accessory and Accessory:FindFirstChild("Handle")
 
     if not Character or not Humanoid or not RootPart then
-        Fluent:Notify({
-            Title = "Error",
-            Content = "Your character not found!",
-            Duration = 3
-        })
+        Fluent:Notify({Title = "Error", Content = "Your character not found!", Duration = 3})
         return
     end
 
-    if TCharacter:FindFirstChildOfClass("Humanoid") then
-        THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
-    end
-    if THumanoid and THumanoid.RootPart then
-        TRootPart = THumanoid.RootPart
-    end
-    if TCharacter:FindFirstChild("Head") then
-        THead = TCharacter.Head
-    end
-    if TCharacter:FindFirstChildOfClass("Accessory") then
-        Accessory = TCharacter:FindFirstChildOfClass("Accessory")
-    end
-    if Accessory and Accessory:FindFirstChild("Handle") then
-        Handle = Accessory.Handle
-    end
-
-    if RootPart.Velocity.Magnitude < 50 then
-        getgenv().OldPos = RootPart.CFrame
-    end
     if THumanoid and THumanoid.Sit then
-        Fluent:Notify({
-            Title = "Error",
-            Content = "Target is sitting!",
-            Duration = 3
-        })
+        Fluent:Notify({Title = "Error", Content = "Target is sitting!", Duration = 3})
         return
     end
 
-    -- Freeze camera from current position
     local freezeCameraCFrame = Camera.CFrame
-    local cameraConnection
-    cameraConnection = RunService.RenderStepped:Connect(function()
+    local cameraConnection = RunService.RenderStepped:Connect(function()
         Camera.CFrame = freezeCameraCFrame
     end)
 
     if THead then
         workspace.CurrentCamera.CameraSubject = THead
-    elseif not THead and Handle then
+    elseif Handle then
         workspace.CurrentCamera.CameraSubject = Handle
     elseif THumanoid and TRootPart then
         workspace.CurrentCamera.CameraSubject = THumanoid
     end
+
     if not TCharacter:FindFirstChildWhichIsA("BasePart") then
         cameraConnection:Disconnect()
         return
@@ -271,28 +233,21 @@ local SkidFling = function(TargetPlayer)
             if RootPart and THumanoid then
                 if BasePart.Velocity.Magnitude < 50 then
                     Angle = Angle + 100
-
                     FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
                     task.wait()
-
                     FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
-
                     FPos(BasePart, CFrame.new(2.25, 1.5, -2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
-
                     FPos(BasePart, CFrame.new(-2.25, -1.5, 2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
-
-                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
-
-                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle), 0, 0))
                     task.wait()
                 else
                     FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
                     task.wait()
-
                     FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
                     task.wait()
                 end
@@ -318,11 +273,11 @@ local SkidFling = function(TargetPlayer)
         else
             SFBasePart(TRootPart)
         end
-    elseif TRootPart and not THead then
+    elseif TRootPart then
         SFBasePart(TRootPart)
-    elseif not TRootPart and THead then
+    elseif THead then
         SFBasePart(THead)
-    elseif not TRootPart and not THead and Accessory and Handle then
+    elseif Handle then
         SFBasePart(Handle)
     else
         cameraConnection:Disconnect()
@@ -331,8 +286,6 @@ local SkidFling = function(TargetPlayer)
 
     BV:Destroy()
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-
-    -- Restore normal camera control
     cameraConnection:Disconnect()
     workspace.CurrentCamera.CameraSubject = Humanoid
 
@@ -354,12 +307,12 @@ local SkidFling = function(TargetPlayer)
         Duration = 3
     })
 end
--- ================================================
 
 -- ================= UI =================
-local Section1 = Tabs.Main:AddSection("Boss Farming")
 
--- Create dropdown and store reference
+-- Main Tab - Boss Farming
+Tabs.Main:AddSection("Boss Farming")
+
 BossDropdown = Tabs.Main:AddDropdown("BossSelectorDropdown", {
     Title = "Select Boss",
     Values = getNearbyBosses(),
@@ -379,14 +332,16 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
             AutoFarmGamemodeEnabled = false
             AutoWhisEnabled = false
             AutoLowLevelEnabled = false
+            AutoTopEnabled = false
         end
     end
 })
 
-local Section2 = Tabs.Zeni:AddSection("High Level")
+-- Zeni Tab
+Tabs.Zeni:AddSection("High Level")
 
 Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
-    Title = "AutoFarm Money",
+    Title = "AutoFarm Money (Whis)",
     Default = false,
     Callback = function(state)
         AutoWhisEnabled = state
@@ -394,15 +349,16 @@ Tabs.Zeni:AddToggle("AutoFarmWhisToggle", {
             AutoFarmEnabled = false
             AutoFarmGamemodeEnabled = false
             AutoLowLevelEnabled = false
+            AutoTopEnabled = false
             SelectedBossName = "Beerus"
         end
     end
 })
 
-local Section2_5 = Tabs.Zeni:AddSection("Low Level")
+Tabs.Zeni:AddSection("Low Level")
 
 Tabs.Zeni:AddToggle("AutoFarmBlackGoku", {
-    Title = "AutoFarm Money",
+    Title = "AutoFarm Money (Goku Black)",
     Default = false,
     Callback = function(state)
         AutoLowLevelEnabled = state
@@ -410,12 +366,14 @@ Tabs.Zeni:AddToggle("AutoFarmBlackGoku", {
             AutoFarmEnabled = false
             AutoWhisEnabled = false
             AutoFarmGamemodeEnabled = false
+            AutoTopEnabled = false
             SelectedBossName = "GokuBlack"
         end
     end
 })
 
-local Section3 = Tabs.Gamemode:AddSection("Waves")
+-- Gamemode Tab
+Tabs.Gamemode:AddSection("Waves")
 
 Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
     Title = "AutoFarm Waves",
@@ -426,13 +384,14 @@ Tabs.Gamemode:AddToggle("AutoFarmGameModeToggle", {
             AutoFarmEnabled = false
             AutoWhisEnabled = false
             AutoLowLevelEnabled = false
+            AutoTopEnabled = false
         end
     end
 })
 
-local Section3_5 = Tabs.Troll:AddSection("Troll")
+-- Troll Tab
+Tabs.Troll:AddSection("Troll")
 
--- Player dropdown that updates constantly
 PlayerDropdown = Tabs.Troll:AddDropdown("PlayerDropdown", {
     Title = "Select Player to Fling",
     Values = getAllPlayers(),
@@ -443,73 +402,89 @@ PlayerDropdown = Tabs.Troll:AddDropdown("PlayerDropdown", {
     end
 })
 
--- Fling button
 Tabs.Troll:AddButton({
     Title = "Fling",
     Callback = function()
         if SelectedPlayer then
             SkidFling(SelectedPlayer)
         else
-            Fluent:Notify({
-                Title = "Error",
-                Content = "Please select a player first!",
-                Duration = 3
-            })
+            Fluent:Notify({Title = "Error", Content = "Please select a player first!", Duration = 3})
         end
     end
 })
 
-local Section4 = Tabs.DragonBall:AddSection("Dragon Balls")
+-- Dragon Ball Tab
+Tabs.DragonBall:AddSection("Dragon Balls")
 
 Tabs.DragonBall:AddButton({
     Title = "Get Dragon Balls",
     Callback = collectDragonBalls
 })
 
-local Section5 = Tabs.MUI:AddSection("MUI Chamber")
+-- MUI Tab
+Tabs.MUI:AddSection("MUI Chamber")
 
 Tabs.MUI:AddToggle("AutoUIToggle", {
     Title = "AutoFarm MUI Chamber",
     Default = false,
     Callback = function(state)
         AutoUIEnabled = state
+        if state then
+            AutoTopEnabled = false
+        end
     end
 })
 
-local Section6 = Tabs.Top:AddSection("Tournament of Power")
+-- TOP Tab (Tournament of Power)
+Tabs.Top:AddSection("Tournament of Power")
 
 Tabs.Top:AddToggle("AutoTopToggle", {
     Title = "AutoFarm TOP Bosses",
     Default = false,
     Callback = function(state)
-        print("hi")
+        AutoTopEnabled = state
+        
+        if state then
+            -- Disable conflicting farms
+            AutoFarmEnabled = false
+            AutoWhisEnabled = false
+            AutoLowLevelEnabled = false
+            AutoFarmGamemodeEnabled = false
+            AutoUIEnabled = false
+            
+            Fluent:Notify({
+                Title = "TOP Autofarm",
+                Content = "Started farming all TOP bosses",
+                Duration = 4
+            })
+        else
+            Fluent:Notify({
+                Title = "TOP Autofarm",
+                Content = "Stopped",
+                Duration = 3
+            })
+        end
     end
 })
--- ================= LOGIC =================
 
-local function getBoss()
-    if not SelectedBossName then return end
+-- ==================== MAIN LOOPS ====================
 
-    local bossesFolder = workspace:FindFirstChild("Bosses")
-    if not bossesFolder then return end
-
-    local boss = bossesFolder:FindFirstChild(SelectedBossName)
-    if not boss then return end
-
-    local hrp = boss:FindFirstChild("HumanoidRootPart")
-    local humanoid = boss:FindFirstChildOfClass("Humanoid")
-
-    return boss, hrp, humanoid
-end
-
--- Boss autofarm loop
+-- Boss autofarm
 task.spawn(function()
     while true do
         if AutoFarmEnabled or AutoLowLevelEnabled then
             local character = player.Character
             local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
-
-            local boss, bossHrp, bossHumanoid = getBoss()
+            local boss, bossHrp, bossHumanoid = nil, nil, nil
+            
+            local bossesFolder = workspace:FindFirstChild("Bosses")
+            if bossesFolder and SelectedBossName then
+                local bossModel = bossesFolder:FindFirstChild(SelectedBossName)
+                if bossModel then
+                    bossHrp = bossModel:FindFirstChild("HumanoidRootPart")
+                    bossHumanoid = bossModel:FindFirstChildOfClass("Humanoid")
+                end
+            end
 
             if playerHrp and bossHrp and bossHumanoid and bossHumanoid.Health > 0 then
                 playerHrp.CFrame = bossHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
@@ -520,7 +495,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Gamemode loop
+-- Gamemode / Waves autofarm
 task.spawn(function()
     local currentTarget = nil
     local lastScanTime = 0
@@ -531,21 +506,16 @@ task.spawn(function()
             local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
             
             if playerHrp then
-                -- Scan for new targets every SCAN_DELAY seconds
                 if tick() - lastScanTime > SCAN_DELAY then
                     local targets = getWorkspaceTargets()
-                    
-                    -- Find the closest target
                     local closestDistance = math.huge
                     local closestTarget = nil
                     
                     for _, target in ipairs(targets) do
-                        if target.hrp and target.humanoid and target.humanoid.Health > 0 then
-                            local distance = (playerHrp.Position - target.hrp.Position).Magnitude
-                            if distance < closestDistance then
-                                closestDistance = distance
-                                closestTarget = target
-                            end
+                        local distance = (playerHrp.Position - target.hrp.Position).Magnitude
+                        if distance < closestDistance then
+                            closestDistance = distance
+                            closestTarget = target
                         end
                     end
                     
@@ -553,12 +523,10 @@ task.spawn(function()
                     lastScanTime = tick()
                 end
                 
-                -- Attack current target if valid
                 if currentTarget and currentTarget.hrp and currentTarget.humanoid and currentTarget.humanoid.Health > 0 then
                     playerHrp.CFrame = currentTarget.hrp.CFrame * CFrame.new(0, 0, BACK_OFFSET)
                     combatRemote:FireServer()
                 else
-                    -- Target is dead or invalid, force a rescan
                     lastScanTime = 0
                 end
             end
@@ -567,7 +535,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Whis quest loop (every 5 seconds)
+-- Whis quest spam
 task.spawn(function()
     while true do
         if AutoWhisEnabled then
@@ -577,16 +545,14 @@ task.spawn(function()
     end
 end)
 
--- Auto UI loop
+-- MUI Chamber farm
 task.spawn(function()
     local TP_DELAY = 0.1
     while true do
         if AutoUIEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local npc = workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild("MerusCH")
             if npc and npc:FindFirstChild("HumanoidRootPart") then
-                -- Teleport to NPC
                 player.Character.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-                -- Attack NPC
                 combatRemote:FireServer()
             end
         end
@@ -594,24 +560,75 @@ task.spawn(function()
     end
 end)
 
--- Update boss dropdown values constantly
+-- TOP Bosses autofarm (NEW)
 task.spawn(function()
+    local TOP_DELAY = 0.07
+    local BACK_OFFSET_TOP = 4
+    
     while true do
-        if BossDropdown then
-            local nearbyBosses = getNearbyBosses()
-            BossDropdown:SetValues(nearbyBosses)
+        if AutoTopEnabled then
+            local character = player.Character
+            local playerHrp = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if not playerHrp then
+                task.wait(0.5)
+                continue
+            end
+            
+            local topFolder = workspace:FindFirstChild("TOPBosses")
+            if not topFolder then
+                task.wait(1)
+                continue
+            end
+            
+            local targetHrp = nil
+            local targetHumanoid = nil
+            local bestDist = math.huge
+            
+            -- Find closest living boss
+            for _, boss in ipairs(topFolder:GetChildren()) do
+                if boss:IsA("Model") then
+                    local hrp = boss:FindFirstChild("HumanoidRootPart")
+                    local hum = boss:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        local dist = (playerHrp.Position - hrp.Position).Magnitude
+                        if dist < bestDist then
+                            bestDist = dist
+                            targetHrp = hrp
+                            targetHumanoid = hum
+                        end
+                    end
+                end
+            end
+            
+            if targetHrp and targetHumanoid and targetHumanoid.Health > 0 then
+                playerHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, BACK_OFFSET_TOP)
+                combatRemote:FireServer()
+            end
         end
-        task.wait(0.05)
+        
+        task.wait(TOP_DELAY)
     end
 end)
 
--- Update player dropdown values constantly (every 0.005 seconds as requested)
+-- Update boss dropdown
+task.spawn(function()
+    while true do
+        if BossDropdown then
+            BossDropdown:SetValues(getNearbyBosses())
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Update player dropdown
 task.spawn(function()
     while true do
         if PlayerDropdown then
-            local players = getAllPlayers()
-            PlayerDropdown:SetValues(players)
+            PlayerDropdown:SetValues(getAllPlayers())
         end
-        task.wait(2) -- Updated to 0.005 seconds as requested
+        task.wait(2)
     end
 end)
+
+print("Angel Hub | Dragon Ball: Legendary Forces - Loaded with TOP autofarm")

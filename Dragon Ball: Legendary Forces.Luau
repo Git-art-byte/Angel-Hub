@@ -20,8 +20,8 @@ local Tabs = {
     Zeni = Window:AddTab({ Title = "Zeni", Icon = "dollar-sign" }),
     Gamemode = Window:AddTab({ Title = "Gamemode", Icon = "waves" }),
     Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "swords" }),
-    DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "" }),
-    MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "" }),
+    DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "circle-star" }),
+    MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "users" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
@@ -465,10 +465,10 @@ Tabs.DragonBall:AddButton({
     Callback = collectDragonBalls
 })
 
-local Section5 = Tabs.MUI:AddSection("UI")
+local Section5 = Tabs.MUI:AddSection("MUI Chamber")
 
 Tabs.MUI:AddToggle("AutoUIToggle", {
-    Title = "Auto MUI Chamber",
+    Title = "AutoFarm MUI Chamber",
     Default = false,
     Callback = function(state)
         AutoUIEnabled = state

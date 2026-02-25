@@ -344,9 +344,9 @@ end
 -- ================= DEFAULT COMMANDS =================
 function ChatCommands:SetupDefaultCommands()
     -- Fling command
-    self:AddCommand("fling", function(args)
+    self:AddCommand("fling", function(self, args)
         if not args[2] then
-            self:Notify("Error", "Usage: ;fling <username/displayname>", 3)
+            self:Notify("Error", "Usage: " .. self.Prefix .. "fling <username/displayname>", 3)
             return
         end
         local targetName = table.concat(args, " ", 2)
@@ -362,15 +362,15 @@ function ChatCommands:SetupDefaultCommands()
     end)
     
     -- Dragon Ball command
-    self:AddCommand("db", function(args)
+    self:AddCommand("db", function(self, args)
         self:Notify("Dragon Balls", "Collecting...", 2)
         self:CollectDragonBalls()
     end)
     
     -- Kill boss command
-    self:AddCommand("kill", function(args)
+    self:AddCommand("kill", function(self, args)
         if not args[2] then
-            self:Notify("Error", "Usage: ;kill <bossName>", 3)
+            self:Notify("Error", "Usage: " .. self.Prefix .. "kill <bossName>", 3)
             return
         end
         local bossName = table.concat(args, " ", 2)
@@ -378,9 +378,9 @@ function ChatCommands:SetupDefaultCommands()
     end)
     
     -- Loop kill command
-    self:AddCommand("loopkill", function(args)
+    self:AddCommand("loopkill", function(self, args)
         if not args[2] then
-            self:Notify("Error", "Usage: ;loopkill <bossName>", 3)
+            self:Notify("Error", "Usage: " .. self.Prefix .. "loopkill <bossName>", 3)
             return
         end
         
@@ -396,12 +396,17 @@ function ChatCommands:SetupDefaultCommands()
     end)
     
     -- Help command
-    self:AddCommand("help", function(args)
+    self:AddCommand("help", function(self, args)
         local commands = {}
         for name, _ in pairs(self.Commands) do
             table.insert(commands, name)
         end
         self:Notify("Available Commands", self.Prefix .. table.concat(commands, ", " .. self.Prefix), 8)
+    end)
+    
+    -- Debug command to test if chat is working
+    self:AddCommand("test", function(self, args)
+        self:Notify("Test", "Command system is working! Prefix: '" .. self.Prefix .. "'", 5)
     end)
 end
 
@@ -411,7 +416,16 @@ function ChatCommands:AddCommand(name, func)
 end
 
 function ChatCommands:HandleCommand(message)
-    if not message:sub(1, #self.Prefix) == self.Prefix then return end
+    -- Debug: Print the message to console
+    print("Chat message received: '" .. message .. "'")
+    
+    -- Check if message starts with prefix
+    if not message:sub(1, #self.Prefix) == self.Prefix then 
+        print("Message doesn't start with prefix '" .. self.Prefix .. "'")
+        return 
+    end
+    
+    print("Command detected with prefix!")
     
     -- Remove prefix and split into command and args
     local args = {}
@@ -419,19 +433,26 @@ function ChatCommands:HandleCommand(message)
         table.insert(args, word)
     end
     
-    if #args == 0 then return end
+    if #args == 0 then 
+        print("No command found after prefix")
+        return 
+    end
     
     local command = args[1]:lower()
+    print("Command: '" .. command .. "'")
     
     if self.Commands[command] then
+        print("Executing command: " .. command)
         local success, err = pcall(function()
             self.Commands[command](self, args)
         end)
         if not success then
+            print("Command error: " .. tostring(err))
             self:Notify("Command Error", "Failed to execute: " .. tostring(err), 4)
         end
     else
-        self:Notify("Unknown Command", "Type ;help for commands", 3)
+        print("Unknown command: " .. command)
+        self:Notify("Unknown Command", "Type " .. self.Prefix .. "help for commands", 3)
     end
 end
 
@@ -453,13 +474,19 @@ function ChatCommands:SetupChatListener()
         self:HandleCommand(message)
     end
     
+    print("Setting up chat listeners...")
+    
     -- Method 1: Players Chat (most common)
     local chatService = self.ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
     if chatService then
+        print("Found DefaultChatSystemChatEvents")
         local sayMessageRequest = chatService:FindFirstChild("SayMessageRequest")
         if sayMessageRequest then
+            print("Found SayMessageRequest, connecting...")
             sayMessageRequest.OnClientEvent:Connect(function(messageData)
+                print("SayMessageRequest triggered")
                 if messageData and messageData.Message then
+                    print("Message: " .. messageData.Message)
                     onChatMessage(messageData.Message)
                 end
             end)
@@ -467,15 +494,22 @@ function ChatCommands:SetupChatListener()
     end
     
     -- Method 2: Legacy chat
-    local chat = self.player.PlayerGui:FindFirstChild("Chat")
-    if chat then
+    local success, result = pcall(function()
+        return self.player.PlayerGui:FindFirstChild("Chat")
+    end)
+    
+    if success and result then
+        print("Found Chat GUI")
+        local chat = result
         local chatFrame = chat:FindFirstChild("Frame")
         if chatFrame then
             local chatBar = chatFrame:FindFirstChild("ChatBar")
             if chatBar then
+                print("Found ChatBar, connecting...")
                 chatBar.FocusLost:Connect(function(enterPressed)
                     if enterPressed then
                         local message = chatBar.Text
+                        print("ChatBar message: " .. message)
                         chatBar.Text = ""
                         onChatMessage(message)
                     end
@@ -484,21 +518,38 @@ function ChatCommands:SetupChatListener()
         end
     end
     
-    -- Method 3: Standard chat remote
+    -- Method 3: Try to find any chat remote
     for _, obj in ipairs(self.ReplicatedStorage:GetDescendants()) do
-        if obj.Name == "ChatMessage" or obj.Name == "OnMessageDoneFiltering" then
+        if obj.Name == "ChatMessage" or obj.Name == "OnMessageDoneFiltering" or obj.Name == "Chat" then
+            print("Found potential chat remote: " .. obj:GetFullName())
             obj.OnClientEvent:Connect(function(...)
                 local args = {...}
+                print("Chat remote triggered: " .. obj.Name)
                 if args[1] and type(args[1]) == "table" and args[1].Message then
                     onChatMessage(args[1].Message)
                 elseif args[2] then
                     onChatMessage(args[2])
+                elseif args[1] and type(args[1]) == "string" then
+                    onChatMessage(args[1])
                 end
             end)
         end
     end
     
+    -- Method 4: Try to hook into the chat function
+    local oldChat = Chat
+    if oldChat then
+        Chat = function(...)
+            local args = {...}
+            if args[1] and type(args[1]) == "string" then
+                onChatMessage(args[1])
+            end
+            return oldChat(...)
+        end
+    end
+    
     self:Notify("Chat Commands", "Loaded! Prefix: '" .. self.Prefix .. "'", 5)
+    print("Chat commands initialized with prefix: '" .. self.Prefix .. "'")
 end
 
 -- ================= INITIALIZATION =================

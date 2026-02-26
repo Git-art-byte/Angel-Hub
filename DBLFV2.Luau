@@ -127,7 +127,6 @@ local Section1 = Tabs.Main:AddSection("AutoFarm")
 
 local Input = Tabs.Main:AddInput("Input", {
     Title = "Input Folder",
-    Description = "e.g. workspace.TOPBosses or workspace.Mobs.Bosses",
     Default = "",
     Placeholder = "workspace.Bosses",
     Numeric = false,
@@ -161,7 +160,7 @@ Tabs.Main:AddButton({
             if folder then
                 for _, mob in ipairs(folder:GetChildren()) do
                     local mhrp = mob:FindFirstChild("HumanoidRootPart")
-                    if mhrp and (mhrp.Position - phrp.Position).Magnitude <= 600 then
+                    if mhrp and (mhrp.Position - phrp.Position).Magnitude <= 1000 then
                         table.insert(mobs, mob.Name)
                     end
                 end

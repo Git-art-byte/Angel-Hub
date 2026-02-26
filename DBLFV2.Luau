@@ -139,7 +139,7 @@ local Input = Tabs.Main:AddInput("Input", {
 
 local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
     Title = "Select Mob",
-    Description = "For single mode (refresh to update)",
+    Description = "Select the mob from the folder you chose (refresh to update).",
     Values = {},
     Multi = false,
     Default = nil,
@@ -150,8 +150,8 @@ local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
 })
 
 Tabs.Main:AddButton({
-    Title = "Refresh Mob List (600 studs)",
-    Description = "Scans nearby mobs in folder",
+    Title = "Refresh Dropdown",
+    Description = "Refresh the dropdown.",
     Callback = function()
         local mobs = {}
         local char = player.Character
@@ -181,7 +181,7 @@ Tabs.Main:AddButton({
 
 local Toggle1 = Tabs.Main:AddToggle("MyToggle1", {
     Title = "Start AutoFarm",
-    Description = "Instant tp behind + spam attack",
+    Description = "Commence the autofarm.",
     Default = false,
     Callback = function(state)
         AutoFarmEnabled = state
@@ -192,8 +192,8 @@ local Toggle1 = Tabs.Main:AddToggle("MyToggle1", {
 local Section2 = Tabs.Main:AddSection("Settings")
 
 local ToggleWhole = Tabs.Main:AddToggle("MyToggle2", {
-    Title = "Whole Folder Mode",
-    Description = "Auto-kill closest → next (ignores dropdown)",
+    Title = "WholeFolder Mode",
+    Description = "Target every mobs in the folder (ignore the dropdown).",
     Default = false,
     Callback = function(state)
         WholeFolderEnabled = state
@@ -202,9 +202,9 @@ local ToggleWhole = Tabs.Main:AddToggle("MyToggle2", {
 })
 
 -- New Safe Mode Toggle
-local ToggleSafe = Tabs.Settings:AddToggle("ToggleSafe", {
+local ToggleSafe = Tabs.Main:AddToggle("ToggleSafe", {
     Title = "Safe Mode",
-    Description = "Slower teleport delay (less detectable)",
+    Description = "Slower teleport delay (less detectable).",
     Default = false,
     Callback = function(state)
         SafeModeEnabled = state

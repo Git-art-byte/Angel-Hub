@@ -17,13 +17,6 @@ Fluent:Notify({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Zeni = Window:AddTab({ Title = "Zeni", Icon = "dollar-sign" }),
-    Gamemode = Window:AddTab({ Title = "Gamemode", Icon = "waves" }),
-    Troll = Window:AddTab({ Title = "Troll/PVP", Icon = "swords" }),
-    Top = Window:AddTab({ Title = "TOP", Icon = "circle" }),
-    DragonBall = Window:AddTab({ Title = "DragonBall", Icon = "circle-star" }),
-    MUI = Window:AddTab({ Title = "Ultra Instinct", Icon = "users" }),
-    Misc = Window:AddTab({ Title = "Misc", Icon = "user" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -34,3 +27,55 @@ SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
+
+local Section1 = Tabs.Main:AddSection("AutoFarm")
+
+local Input = Tabs.Main:AddInput("Input", {
+    Title = "Input Folder",
+    Description = "Input the path/link of the folder you want to farm the mobs.",
+    Default = "Default",
+    Placeholder = "workspace.Bosses",
+    Numeric = false, -- Only allows numbers
+    Finished = false, -- Only calls callback when you press enter
+    Callback = function(Value)
+        print("Input changed:", Value)
+    end
+})
+
+local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
+    Title = "Select Mob",
+    Description = "Select the mob you want to autofarm.",
+    Values = {},
+    Multi = false,
+    Default = 1,
+})
+
+local Toggle1 = Tabs.Main:AddToggle("MyToggle1", 
+{
+    Title = "Start", 
+    Description = "Commence the autofarm.",
+    Default = false
+    Callback = function(state)
+	if state then
+	    print("Toggle On")
+	else
+	    print("Toggle Off")
+        end
+    end 
+})
+
+local Section2 = Tabs.Main:AddSection("Settings")
+
+local Toggle = Tabs.Main:AddToggle("MyToggle2", 
+{
+    Title = "Whole Folder", 
+    Description = "Turning this toogle on gonna autofarm every mobs in the folder.",
+    Default = false
+    Callback = function(state)
+	if state then
+	    print("Toggle On")
+	else
+	    print("Toggle Off")
+        end
+    end 
+})

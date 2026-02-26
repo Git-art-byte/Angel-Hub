@@ -1,6 +1,6 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "ANGEL HUB | Dragon Ball: Legendary Forces" .. Fluent.Version,
+    Title = "ANGEL HUB | Dragon Ball: Legendary Forces " .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 320),
@@ -55,7 +55,8 @@ local AutoWhisEnabled = false
 local AutoUIEnabled = false
 local AutoFarmGamemodeEnabled = false
 local AutoLowLevelEnabled = false
-local AutoTopEnabled = false          -- ← NEW
+local AutoTopEnabled = false
+local AutoGetDBsEnabled = false          -- ← Added for loop toggle
 
 local SelectedBossName = nil
 local SelectedPlayer = nil
@@ -64,12 +65,15 @@ local SelectedPlayer = nil
 local BossDropdown = nil
 local PlayerDropdown = nil
 
+-- Dragon Balls loop task (will be used to cancel properly)
+local LoopDBConnection = nil
+
 -- ============================================
 
 local function getAllPlayers()
     local playerList = {}
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player then
+        if plr \~= player then
             table.insert(playerList, plr.Name)
         end
     end
@@ -109,7 +113,7 @@ local function getWorkspaceTargets()
             local humanoid = obj:FindFirstChildOfClass("Humanoid")
             
             if hrp and humanoid and humanoid.Health > 0 then
-                if obj ~= player.Character then
+                if obj \~= player.Character then
                     table.insert(targets, {
                         model = obj,
                         hrp = hrp,
@@ -254,7 +258,7 @@ local SkidFling = function(TargetPlayer)
             else
                 break
             end
-        until BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
+        until BasePart.Velocity.Magnitude > 500 or BasePart.Parent \~= TargetPlayer.Character or TargetPlayer.Parent \~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
     end
 
     workspace.FallenPartsDestroyHeight = 0/0
@@ -417,17 +421,52 @@ Tabs.Troll:AddButton({
 Tabs.DragonBall:AddSection("Dragon Balls")
 
 Tabs.DragonBall:AddButton({
-    Title = "Get Dragon Balls",
+    Title = "Get Dragon Balls (Once)",
     Callback = collectDragonBalls
 })
 
-Tabs.DragonBall:AddToogle("LoopDBToogle", {
-    Title = "Loop Get DB",
+Tabs.DragonBall:AddToggle("LoopDBToggle", {
+    Title = "Loop Get DBs (every \~10s)",
     Default = false,
-    Callback = function()
-        print("hi")
-   end
+    Callback = function(state)
+        AutoGetDBsEnabled = state
+        
+        if state then
+            Fluent:Notify({
+                Title = "Dragon Balls Loop",
+                Content = "Started → collecting every \~10 seconds",
+                Duration = 4.5
+            })
+            
+            LoopDBConnection = task.spawn(function()
+                while AutoGetDBsEnabled do
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        collectDragonBalls()
+                    else
+                        Fluent:Notify({
+                            Title = "DB Loop",
+                            Content = "Waiting for character to load...",
+                            Duration = 4
+                        })
+                    end
+                    task.wait(10)   -- ← change this number if you want faster/slower
+                end
+            end)
+            
+        else
+            if LoopDBConnection then
+                task.cancel(LoopDBConnection)
+                LoopDBConnection = nil
+            end
+            Fluent:Notify({
+                Title = "Dragon Balls Loop",
+                Content = "Stopped",
+                Duration = 3
+            })
+        end
+    end
 })
+
 -- MUI Tab
 Tabs.MUI:AddSection("MUI Chamber")
 
@@ -452,7 +491,6 @@ Tabs.Top:AddToggle("AutoTopToggle", {
         AutoTopEnabled = state
         
         if state then
-            -- Disable conflicting farms
             AutoFarmEnabled = false
             AutoWhisEnabled = false
             AutoLowLevelEnabled = false
@@ -567,7 +605,7 @@ task.spawn(function()
     end
 end)
 
--- TOP Bosses autofarm (NEW)
+-- TOP Bosses autofarm
 task.spawn(function()
     local TOP_DELAY = 0.07
     local BACK_OFFSET_TOP = 4
@@ -592,7 +630,6 @@ task.spawn(function()
             local targetHumanoid = nil
             local bestDist = math.huge
             
-            -- Find closest living boss
             for _, boss in ipairs(topFolder:GetChildren()) do
                 if boss:IsA("Model") then
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
@@ -638,4 +675,4 @@ task.spawn(function()
     end
 end)
 
-print("Angel Hub | Dragon Ball: Legendary Forces - Loaded with TOP autofarm")
+print("Angel Hub | Dragon Ball: Legendary Forces - Loaded with DB loop")

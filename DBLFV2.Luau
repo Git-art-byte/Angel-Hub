@@ -28,184 +28,179 @@ InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local combatRemote = game:GetService("ReplicatedStorage").Assets.CombatAssets.CombatRemotes.ActivateCombat
+local Options = Fluent.Options
 
-local AutoFarmEnabled = false
-local WholeFolderEnabled = false
-local SafeModeEnabled = false          -- New safe toggle
-local FolderPath = ""
-local SelectedMob = nil
-local currentTarget = nil
-
-local BACK_OFFSET = CFrame.new(0, 0, -5)
-local TELEPORT_DELAY_NORMAL = 0.1
-local TELEPORT_DELAY_SAFE = 0.4        -- Slower in safe mode to look more legit
+-- Global flag to prevent multiple autofarm loops
+_G.AutofarmRunning = false
 
 local function getFolder(path)
-    if path == "" then return nil end
-    local parts = string.split(path, ".")
-    local current = workspace
-    for _, part in ipairs(parts) do
-        current = current:FindFirstChild(part)
-        if not current then 
-            Fluent:Notify({Title="Error", Content="Folder not found: " .. path, Duration=5})
-            return nil 
+    local success, folder = pcall(function()
+        local current = game
+        for _, part in ipairs(path:split(".")) do
+            current = current:WaitForChild(part, 5)
         end
+        return current
+    end)
+    if not success or not folder then
+        return nil
     end
-    return current
+    return folder
 end
 
--- Main autofarm loop
-task.spawn(function()
-    while true do
-        if AutoFarmEnabled then
-            local char = player.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then task.wait(0.5) continue end
-
-            local folder = getFolder(FolderPath)
-            if not folder then task.wait(1) continue end
-
-            -- Reset target if dead/gone
-            if currentTarget and (not currentTarget.Parent or 
-                (currentTarget:FindFirstChildOfClass("Humanoid") and currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0)) then
-                currentTarget = nil
-            end
-
-            -- Pick new target
-            if not currentTarget then
-                local candidates = {}
-                for _, mob in ipairs(folder:GetChildren()) do
-                    if mob:IsA("Model") then
-                        local mhrp = mob:FindFirstChild("HumanoidRootPart")
-                        local hum = mob:FindFirstChildOfClass("Humanoid")
-                        if mhrp and hum and hum.Health > 0 then
-                            local dist = (mhrp.Position - hrp.Position).Magnitude
-                            table.insert(candidates, {model = mob, hrp = mhrp, dist = dist})
-                        end
-                    end
-                end
-
-                if WholeFolderEnabled then
-                    table.sort(candidates, function(a,b) return a.dist < b.dist end)
-                    if #candidates > 0 then
-                        currentTarget = candidates[1].model
-                    end
-                else
-                    if SelectedMob then
-                        for _, cand in ipairs(candidates) do
-                            if cand.model.Name == SelectedMob then
-                                currentTarget = cand.model
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- Teleport and attack
-            if currentTarget then
-                local bossHRP = currentTarget:FindFirstChild("HumanoidRootPart")
-                local bossHum = currentTarget:FindFirstChildOfClass("Humanoid")
-                if bossHRP and bossHum and bossHum.Health > 0 then
-                    hrp.CFrame = bossHRP.CFrame * BACK_OFFSET
-                    combatRemote:FireServer()
-                end
-            end
-        end
-        
-        -- Dynamic delay based on safe mode
-        local currentDelay = SafeModeEnabled and TELEPORT_DELAY_SAFE or TELEPORT_DELAY_NORMAL
-        task.wait(currentDelay)
+local function refreshMobs(path)
+    local folder = getFolder(path)
+    if not folder then
+        Fluent:Notify({Title = "Error", Content = "Invalid folder path!", Duration = 4})
+        return
     end
-end)
+    
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local root = char:WaitForChild("HumanoidRootPart")
+    
+    local mobs = {}
+    for _, m in ipairs(folder:GetChildren()) do
+        local hrp = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Torso")
+        local hum = m:FindFirstChild("Humanoid")
+        if hum and hum.Health > 0 and hrp and (hrp.Position - root.Position).Magnitude <= 600 then
+            table.insert(mobs, m.Name)
+        end
+    end
+    
+    Options.Dropdown:SetValues(mobs)
+    if #mobs > 0 then
+        Options.Dropdown:Set(mobs[1])
+    end
+end
 
--- UI
 local Section1 = Tabs.Main:AddSection("AutoFarm")
 
 local Input = Tabs.Main:AddInput("Input", {
     Title = "Input Folder",
-    Default = "",
+    Description = "Input the path/link of the folder you want to farm the mobs.",
+    Default = "workspace.Bosses",
     Placeholder = "workspace.Bosses",
     Numeric = false,
     Finished = false,
     Callback = function(Value)
-        FolderPath = Value
+        refreshMobs(Value)
     end
 })
 
 local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
     Title = "Select Mob",
-    Description = "Select the mob from the folder you chose (refresh to update).",
+    Description = "Select the mob you want to autofarm.",
     Values = {},
     Multi = false,
-    Default = nil,
-    Callback = function(val)
-        SelectedMob = val
-        currentTarget = nil
-    end
+    Default = "",
 })
 
-Tabs.Main:AddButton({
-    Title = "Refresh Dropdown",
-    Description = "Refresh the dropdown.",
-    Callback = function()
-        local mobs = {}
-        local char = player.Character
-        local phrp = char and char:FindFirstChild("HumanoidRootPart")
-        if phrp then
-            local folder = getFolder(FolderPath)
-            if folder then
-                for _, mob in ipairs(folder:GetChildren()) do
-                    local mhrp = mob:FindFirstChild("HumanoidRootPart")
-                    if mhrp and (mhrp.Position - phrp.Position).Magnitude <= 1000 then
-                        table.insert(mobs, mob.Name)
-                    end
-                end
+local RefreshToggle = Tabs.Main:AddToggle("RefreshToggle", {
+    Title = "Refresh",
+    Description = "Refreshes the mob list from current folder (auto-off).",
+    Default = false,
+    Callback = function(state)
+        if state then
+            local currentPath = Options.Input.Value
+            if currentPath and currentPath \~= "" then
+                refreshMobs(currentPath)
             else
-                Fluent:Notify({Title="Error", Content="Enter valid folder first!", Duration=4})
-                return
+                Fluent:Notify({Title = "Error", Content = "No folder path set!", Duration = 3})
             end
+            Options.RefreshToggle.Value = false  -- Auto turn off
         end
-        Dropdown:SetValues(mobs)
-        if #mobs > 0 then 
-            Dropdown:SetValue(mobs[1])
-            SelectedMob = mobs[1]
-        end
-        Fluent:Notify({Title="Refreshed", Content=#mobs .. " mobs found", Duration=3})
     end
 })
 
 local Toggle1 = Tabs.Main:AddToggle("MyToggle1", {
-    Title = "Start AutoFarm",
+    Title = "Start",
     Description = "Commence the autofarm.",
     Default = false,
     Callback = function(state)
-        AutoFarmEnabled = state
-        if not state then currentTarget = nil end
+        if state and not _G.AutofarmRunning then
+            _G.AutofarmRunning = true
+            spawn(function()
+                local player = game.Players.LocalPlayer
+                local remote = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("CombatAssets"):WaitForChild("CombatRemotes"):WaitForChild("ActivateCombat")
+                
+                while Options.MyToggle1.Value and _G.AutofarmRunning do
+                    local folderPath = Options.Input.Value
+                    local folder = getFolder(folderPath)
+                    if not folder then
+                        task.wait(1)
+                        continue
+                    end
+                    
+                    local char = player.Character
+                    if not char or not char.Parent then
+                        task.wait(1)
+                        continue
+                    end
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if not hrp or not hrp.Parent then
+                        task.wait(1)
+                        continue
+                    end
+                    
+                    if Options.MyToggle2.Value then
+                        -- Whole folder: collect all alive, sort by distance, farm one by one
+                        local all_mobs = {}
+                        for _, child in ipairs(folder:GetChildren()) do
+                            local mob_hrp = child:FindFirstChild("HumanoidRootPart") or child:FindFirstChild("Torso")
+                            local hum = child:FindFirstChild("Humanoid")
+                            if hum and hum.Health > 0 and mob_hrp then
+                                table.insert(all_mobs, {model = child, hrp = mob_hrp, dist = (mob_hrp.Position - hrp.Position).Magnitude})
+                            end
+                        end
+                        -- Sort by distance (nearest first)
+                        table.sort(all_mobs, function(a, b) return a.dist < b.dist end)
+                        
+                        for _, mobData in ipairs(all_mobs) do
+                            local mob = mobData.model
+                            local mobRoot = mobData.hrp
+                            while Options.MyToggle1.Value and _G.AutofarmRunning and mob.Parent and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mobRoot and mobRoot.Parent do
+                                local behindPos = mobRoot.Position - mobRoot.CFrame.LookVector * 4
+                                hrp.CFrame = CFrame.lookAt(behindPos, mobRoot.Position)
+                                remote:FireServer()
+                                task.wait(0.08)
+                            end
+                            task.wait(0.3)  -- Short delay before next mob
+                        end
+                    else
+                        -- Single selected mob
+                        local selectedName = Options.Dropdown.Value
+                        if selectedName and selectedName \~= "" then
+                            local mob = folder:FindFirstChild(selectedName)
+                            if mob then
+                                local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
+                                local hum = mob:FindFirstChild("Humanoid")
+                                if hum and hum.Health > 0 and mobRoot then
+                                    while Options.MyToggle1.Value and _G.AutofarmRunning and mob.Parent and hum.Health > 0 and mobRoot.Parent do
+                                        local behindPos = mobRoot.Position - mobRoot.CFrame.LookVector * 4
+                                        hrp.CFrame = CFrame.lookAt(behindPos, mobRoot.Position)
+                                        remote:FireServer()
+                                        task.wait(0.08)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
+                    task.wait(0.5)  -- Prevent CPU hog between cycles
+                end
+                _G.AutofarmRunning = false
+            end)
+        elseif not state then
+            _G.AutofarmRunning = false
+        end
     end
 })
 
 local Section2 = Tabs.Main:AddSection("Settings")
 
-local ToggleWhole = Tabs.Main:AddToggle("MyToggle2", {
-    Title = "WholeFolder Mode",
-    Description = "Target every mobs in the folder (ignore the dropdown).",
+local Toggle2 = Tabs.Main:AddToggle("MyToggle2", {
+    Title = "Whole Folder",
+    Description = "Autofarm every mob in the folder one by one (ignores dropdown).",
     Default = false,
-    Callback = function(state)
-        WholeFolderEnabled = state
-        currentTarget = nil
-    end
-})
-
--- New Safe Mode Toggle
-local ToggleSafe = Tabs.Main:AddToggle("ToggleSafe", {
-    Title = "Safe Mode",
-    Description = "Slower teleport delay (less detectable).",
-    Default = false,
-    Callback = function(state)
-        SafeModeEnabled = state
-    end
+    Callback = function() end  -- No callback needed, checked in loop
 })

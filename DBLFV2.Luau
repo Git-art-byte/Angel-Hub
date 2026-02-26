@@ -52,7 +52,7 @@ local Section1 = Tabs.Main:AddSection("AutoFarm")
 
 local Input = Tabs.Main:AddInput("Input", {
     Title = "Input Folder",
-    Description = "Input the path/link of the folder you want to farm the mobs.",
+    Description = "Input the path/link of the folder you want to farm the mobs(Warning: The mobs must be models with a HumanoidRootPart).",
     Default = "",
     Placeholder = "workspace.Bosses",
     Numeric = false,

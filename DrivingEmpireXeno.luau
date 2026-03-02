@@ -32,7 +32,7 @@ local function ExecuteServerHop()
     if qot then
         qot([[
 repeat task.wait() until game:IsLoaded()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/xxCichyxx/rbxscripts/refs/heads/main/DrivingEmpireXeno.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Git-art-byte/Angel-Hub/refs/heads/main/DrivingEmpireXeno.luau"))()
 ]])
     end
 
@@ -74,10 +74,10 @@ _G.SpeedMode = "Legit"
 _G.SpeedValue = 16
 
 local Window = Rayfield:CreateWindow({
-    Name = "Driving Empire Car Racing",
+    Name = "Angel Hub | Driving Empire",
     Icon = "car",
     LoadingTitle = "Driving Empire",
-    LoadingSubtitle = "by XenoScriptsPL",
+    LoadingSubtitle = "by Ange",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "DrivingEmpireScripts",
